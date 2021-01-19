@@ -152,12 +152,5 @@ namespace TestServer
                 Console.WriteLine(e.ToString());
             }
         }
-
-        public static void Main(String[] args)
-        {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new TestServerUI());
-        }
     }
 }
