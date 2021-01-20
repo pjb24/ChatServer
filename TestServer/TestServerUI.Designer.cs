@@ -29,19 +29,19 @@ namespace TestServer
         /// </summary>
         private void InitializeComponent()
         {
-            this.lbResult = new System.Windows.Forms.ListBox();
+            this.lb_Result = new System.Windows.Forms.ListBox();
             this.btn_Close = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // lbResult
+            // lb_Result
             // 
-            this.lbResult.FormattingEnabled = true;
-            this.lbResult.ItemHeight = 15;
-            this.lbResult.Location = new System.Drawing.Point(12, 12);
-            this.lbResult.Name = "lbResult";
-            this.lbResult.Size = new System.Drawing.Size(776, 289);
-            this.lbResult.TabIndex = 0;
+            this.lb_Result.FormattingEnabled = true;
+            this.lb_Result.ItemHeight = 15;
+            this.lb_Result.Location = new System.Drawing.Point(12, 12);
+            this.lb_Result.Name = "lb_Result";
+            this.lb_Result.Size = new System.Drawing.Size(776, 289);
+            this.lb_Result.TabIndex = 0;
             // 
             // btn_Close
             // 
@@ -70,7 +70,7 @@ namespace TestServer
             this.ClientSize = new System.Drawing.Size(800, 411);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.btn_Close);
-            this.Controls.Add(this.lbResult);
+            this.Controls.Add(this.lb_Result);
             this.Name = "TestServerUI";
             this.Text = "TestServer";
             this.Load += new System.EventHandler(this.TestServerUI_Load);
@@ -80,7 +80,7 @@ namespace TestServer
 
         #endregion
         private System.Windows.Forms.Button btn_Close;
-        public System.Windows.Forms.ListBox lbResult;
+        public System.Windows.Forms.ListBox lb_Result;
         private System.Windows.Forms.Button button1;
     }
 }

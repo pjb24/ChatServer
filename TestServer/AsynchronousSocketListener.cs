@@ -40,17 +40,18 @@ namespace TestServer
             this.StartListeningDelegate = StartListening;
         }
 
+        // Window Form ListBox 사용 메서드
         private static void WriteListBoxSafe(String text)
         {
-            if (TestServerUI.testServerUI.lbResult.InvokeRequired)
+            if (TestServerUI.testServerUI.lb_Result.InvokeRequired)
             {
-                TestServerUI.testServerUI.lbResult.Invoke((MethodInvoker) delegate()
+                TestServerUI.testServerUI.lb_Result.Invoke((MethodInvoker) delegate()
                 {
                     WriteListBoxSafe(text);
                 });
             } else
             {
-                TestServerUI.testServerUI.lbResult.Items.Add(text);
+                TestServerUI.testServerUI.lb_Result.Items.Add(text);
             }
         }
 
