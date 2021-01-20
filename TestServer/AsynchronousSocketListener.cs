@@ -26,16 +26,54 @@ namespace TestServer
         // Client socket.
         public Socket workSocket = null;
     }
+
     class AsynchronousSocketListener
     {
+        // delegate 생성
+        private Action StartListeningDelegate;
+
         // Tread signal.
         public static ManualResetEvent allDone = new ManualResetEvent(false);
 
         public AsynchronousSocketListener()
         {
-
+            this.StartListeningDelegate = StartListening;
         }
 
+        private static void WriteListBoxSafe(String text)
+        {
+            if (TestServerUI.testServerUI.lbResult.InvokeRequired)
+            {
+                TestServerUI.testServerUI.lbResult.Invoke((MethodInvoker) delegate()
+                {
+                    WriteListBoxSafe(text);
+                });
+            } else
+            {
+                TestServerUI.testServerUI.lbResult.Items.Add(text);
+            }
+        }
+
+        // End메서드 호출할 Callback 메서드
+        public void StartListeningCallback(IAsyncResult ar)
+        {
+            var async = ar.AsyncState as AsynchronousSocketListener;
+            async.EndStartListening(ar);
+        }
+
+        // BeginInvoke할 메서드
+        public IAsyncResult BeginStartListening(AsyncCallback asyncCallback, object state)
+        {
+            return StartListeningDelegate.BeginInvoke(asyncCallback, state);
+        }
+
+        // EndInvoke할 메서드
+        public void EndStartListening(IAsyncResult asyncResult)
+        {
+            this.StartListeningDelegate.EndInvoke(asyncResult);
+        }
+
+        // 작업 진행 메서드
         public static void StartListening()
         {
             // Establish the local endpoint for the socket.
@@ -61,6 +99,7 @@ namespace TestServer
 
                     // Start an asynchronous socket to listen for connections.
                     Console.WriteLine("Waiting for a connection...");
+                    WriteListBoxSafe("Waiting for a connection...");
                     listener.BeginAccept(new AsyncCallback(AcceptCallback), listener);
                     
                     // Wait until a connection is made before continuing.
@@ -72,6 +111,7 @@ namespace TestServer
             }
 
             Console.WriteLine("\nPress ENTER to continue...");
+            WriteListBoxSafe("\nPress ENTER to continue...");
             Console.Read();
         }
 
@@ -114,6 +154,7 @@ namespace TestServer
                     // All the data has been read from the
                     // client. Display it on the console.
                     Console.WriteLine("Read {0} bytes from socket. \n Data : {1}", content.Length, content);
+                    WriteListBoxSafe("Read " + content.Length + " bytes from socket. \n Data : " + content);
                     // Echo the data back to the client.
                     Send(handler, content);
                 } else
@@ -142,7 +183,9 @@ namespace TestServer
 
                 // Complete sending the data to the remote device.
                 int bytesSent = handler.EndSend(ar);
+
                 Console.WriteLine("Sent {0} bytes to client.", bytesSent);
+                WriteListBoxSafe("Sent " + bytesSent + " bytes to client.");
 
                 handler.Shutdown(SocketShutdown.Both);
                 handler.Close();
