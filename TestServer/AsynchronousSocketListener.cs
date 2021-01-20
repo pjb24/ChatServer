@@ -62,6 +62,7 @@ namespace TestServer
             } else
             {
                 TestServerUI.testServerUI.lb_Result.Items.Add(text);
+                TestServerUI.testServerUI.lb_Result.SetSelected(TestServerUI.testServerUI.lb_Result.Items.Count - 1, true);
             }
         }
 
