@@ -13,6 +13,7 @@ namespace TestServer
     public partial class TestServerUI : Form
     {
         public static TestServerUI testServerUI;
+
         public TestServerUI()
         {
             InitializeComponent();

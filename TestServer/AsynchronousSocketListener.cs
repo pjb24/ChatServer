@@ -27,8 +27,17 @@ namespace TestServer
         public Socket workSocket = null;
     }
 
+    static class Constants
+    {
+        public const int MAX_CLIENT_COUNT = 10;
+    }
+
     class AsynchronousSocketListener
     {
+        private static Socket[] client_list = new Socket[Constants.MAX_CLIENT_COUNT];
+        static int client_count;
+        static string[] client_ip = new string[Constants.MAX_CLIENT_COUNT];
+
         // delegate 생성
         private Action StartListeningDelegate;
 
@@ -37,6 +46,7 @@ namespace TestServer
 
         public AsynchronousSocketListener()
         {
+            client_count = 0;
             this.StartListeningDelegate = StartListening;
         }
 
@@ -118,17 +128,39 @@ namespace TestServer
 
         public static void AcceptCallback(IAsyncResult ar)
         {
-            // Signal the main thread to continue.
-            allDone.Set();
+            try
+            {
+                if (Constants.MAX_CLIENT_COUNT > client_count)
+                {
+                    // Signal the main thread to continue.
+                    allDone.Set();
 
-            // Get the socket that handles the client request.
-            Socket listener = (Socket)ar.AsyncState;
-            Socket handler = listener.EndAccept(ar);
+                    // Get the socket that handles the client request.
+                    Socket listener = (Socket)ar.AsyncState;
+                    Socket handler = listener.EndAccept(ar);
 
-            // Create the state object.
-            StateObject state = new StateObject();
-            state.workSocket = handler;
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+                    // Create the state object.
+                    StateObject state = new StateObject();
+                    state.workSocket = handler;
+
+                    client_list[client_count] = state.workSocket;
+                    client_ip[client_count] = state.workSocket.RemoteEndPoint.ToString();
+                    WriteListBoxSafe("새로운 클라이언트가 접속했습니다. : " + client_ip[client_count]);
+
+                    client_count += 1;
+
+                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+                }
+                else
+                {
+
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                ClientCloseProcess((Socket)ar.AsyncState);
+            }
         }
 
         public static void ReadCallback(IAsyncResult ar)
@@ -158,7 +190,8 @@ namespace TestServer
                     WriteListBoxSafe("Read " + content.Length + " bytes from socket. \n Data : " + content);
                     // Echo the data back to the client.
                     Send(handler, content);
-                } else
+                }
+                else
                 {
                     // Not all data received. Get more.
                     handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
@@ -194,6 +227,25 @@ namespace TestServer
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
+                ClientCloseProcess((Socket)ar.AsyncState);
+            }
+        }
+
+        public static void ClientCloseProcess(Socket socket)
+        {
+            socket.Close();
+
+            for (int i = 0; i < client_count; i++)
+            {
+                if(client_list[i] == socket)
+                {
+                    client_count--;
+                    if(i != client_count)
+                    {
+                        client_list[i] = client_list[client_count];
+                        client_ip[i] = client_ip[client_count];
+                    }
+                }
             }
         }
     }
