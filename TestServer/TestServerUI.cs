@@ -32,8 +32,8 @@ namespace TestServer
 
         private void TestServerUI_Load(object sender, EventArgs e)
         {
-            workerThread = new Thread(AsynchronousSocketListener.StartListening);
-            workerThread.Start();
+            AsynchronousSocketListener server = new AsynchronousSocketListener();
+            server.LoadServer();
         }
 
         private void button1_Click(object sender, EventArgs e)

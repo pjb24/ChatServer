@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 
 using System.Windows.Forms;
+using System.Collections.Generic;
 
 namespace TestServer
 {
@@ -24,13 +25,32 @@ namespace TestServer
         public Socket workSocket = null;
     }
 
+    public class SocketList
+    {
+        public Dictionary<int, StateObject> stateObjects;
+        public int count;
+    }
+
     public class AsynchronousSocketListener
     {
+        private const int port = 11000;
+
+        SocketList socketList = new SocketList();
+
         // Thread signal.  
         public static ManualResetEvent allDone = new ManualResetEvent(false);
 
+        public void LoadServer()
+        {
+            socketList.stateObjects.Clear();
+            Thread workerThread;
+            workerThread = new Thread(AsynchronousSocketListener.StartListening);
+            workerThread.Start();
+        }
+
         public AsynchronousSocketListener()
         {
+            
         }
 
         public static void StartListening()
@@ -40,16 +60,15 @@ namespace TestServer
             // running the listener is "host.contoso.com".  
             IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
             IPAddress ipAddress = ipHostInfo.AddressList[0];
-            IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
+            IPEndPoint endPoint = new IPEndPoint(ipAddress, port);
 
             // Create a TCP/IP socket.  
-            Socket listener = new Socket(ipAddress.AddressFamily,
-                SocketType.Stream, ProtocolType.Tcp);
+            Socket listener = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
             // Bind the socket to the local endpoint and listen for incoming connections.  
             try
             {
-                listener.Bind(localEndPoint);
+                listener.Bind(endPoint);
                 listener.Listen(100);
 
                 while (true)
@@ -60,9 +79,7 @@ namespace TestServer
                     // Start an asynchronous socket to listen for connections.  
                     Console.WriteLine("Waiting for a connection...");
                     WriteListBoxSafe("Waiting for a connection...");
-                    listener.BeginAccept(
-                        new AsyncCallback(AcceptCallback),
-                        listener);
+                    listener.BeginAccept( new AsyncCallback(AcceptCallback), listener);
 
                     // Wait until a connection is made before continuing.  
                     allDone.WaitOne();
@@ -92,6 +109,16 @@ namespace TestServer
             // Create the state object.  
             StateObject state = new StateObject();
             state.workSocket = handler;
+
+            foreach(StateObject item in socketList.stateObjects.Values)
+            {
+                if (!item.Equals(state))
+                {
+                    socketList.stateObjects.Add(socketList.count, state);
+                    socketList.count++;
+                }
+            }
+            
             handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                 new AsyncCallback(ReadCallback), state);
         }
@@ -123,8 +150,11 @@ namespace TestServer
                     // client. Display it on the console.  
                     Console.WriteLine("Read {0} bytes from socket. \n Data : {1}", content.Length, content);
                     WriteListBoxSafe("Read " + content.Length + " bytes from socket. \n Data : " + content);
-                    // Echo the data back to the client.  
-                    Send(handler, content);
+                    // Echo the data back to the client.
+                    for(int i = 0; i < count; i++)
+                    {
+                        Send(stateObjects[i].workSocket, content);
+                    }
                 }
                 else
                 {
