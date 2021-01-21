@@ -8,11 +8,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using System.Threading;
+
 namespace TestServer
 {
     public partial class TestServerUI : Form
     {
         public static TestServerUI testServerUI;
+
+        Thread workerThread;
 
         public TestServerUI()
         {
@@ -22,13 +26,14 @@ namespace TestServer
 
         private void btn_Close_Click(object sender, EventArgs e)
         {
+            workerThread.Interrupt();
             this.Close();
         }
 
         private void TestServerUI_Load(object sender, EventArgs e)
         {
-            var listen_socket = new AsynchronousSocketListener();
-            listen_socket.BeginStartListening(listen_socket.StartListeningCallback, listen_socket);
+            workerThread = new Thread(AsynchronousSocketListener.StartListening);
+            workerThread.Start();
         }
 
         private void button1_Click(object sender, EventArgs e)
