@@ -131,36 +131,28 @@ namespace TestServer
         {
             try
             {
-                if (Constants.MAX_CLIENT_COUNT > client_count)
-                {
-                    // Signal the main thread to continue.
-                    allDone.Set();
+                // Signal the main thread to continue.
+                allDone.Set();
 
-                    // Get the socket that handles the client request.
-                    Socket listener = (Socket)ar.AsyncState;
-                    Socket handler = listener.EndAccept(ar);
+                // Get the socket that handles the client request.
+                Socket listener = (Socket)ar.AsyncState;
+                Socket handler = listener.EndAccept(ar);
 
-                    // Create the state object.
-                    StateObject state = new StateObject();
-                    state.workSocket = handler;
+                // Create the state object.
+                StateObject state = new StateObject();
+                state.workSocket = handler;
 
-                    client_list[client_count] = state.workSocket;
-                    client_ip[client_count] = state.workSocket.RemoteEndPoint.ToString();
-                    WriteListBoxSafe("새로운 클라이언트가 접속했습니다. : " + client_ip[client_count]);
+                client_list[client_count] = state.workSocket;
+                client_ip[client_count] = state.workSocket.RemoteEndPoint.ToString();
+                WriteListBoxSafe("새로운 클라이언트가 접속했습니다. : " + client_ip[client_count]);
 
-                    client_count += 1;
+                client_count += 1;
 
-                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
-                }
-                else
-                {
-
-                }
+                handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
-                ClientCloseProcess((Socket)ar.AsyncState);
             }
         }
 
@@ -222,13 +214,12 @@ namespace TestServer
                 Console.WriteLine("Sent {0} bytes to client.", bytesSent);
                 WriteListBoxSafe("Sent " + bytesSent + " bytes to client.");
 
-                handler.Shutdown(SocketShutdown.Both);
-                handler.Close();
+                //handler.Shutdown(SocketShutdown.Both);
+                //handler.Close();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.ToString());
-                ClientCloseProcess((Socket)ar.AsyncState);
             }
         }
 
