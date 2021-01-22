@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsynchronousSocketListener.cs" />
+    <Compile Include="handleClient.cs" />
     <Compile Include="IAsyncResult%28APM%29.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

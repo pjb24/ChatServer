@@ -25,26 +25,21 @@ namespace TestServer
         public Socket workSocket = null;
     }
 
-    public class SocketList
-    {
-        public Dictionary<int, StateObject> stateObjects;
-        public int count;
-    }
-
     public class AsynchronousSocketListener
     {
         private const int port = 11000;
+        private const int sendPort = 11001;
 
-        SocketList socketList = new SocketList();
+        public static Dictionary<int, IPEndPoint> socketList = new Dictionary<int, IPEndPoint>();
 
         // Thread signal.  
         public static ManualResetEvent allDone = new ManualResetEvent(false);
+        private static ManualResetEvent connectDone = new ManualResetEvent(false);
 
         public void LoadServer()
         {
-            socketList.stateObjects.Clear();
             Thread workerThread;
-            workerThread = new Thread(AsynchronousSocketListener.StartListening);
+            workerThread = new Thread(StartListening);
             workerThread.Start();
         }
 
@@ -79,7 +74,7 @@ namespace TestServer
                     // Start an asynchronous socket to listen for connections.  
                     Console.WriteLine("Waiting for a connection...");
                     WriteListBoxSafe("Waiting for a connection...");
-                    listener.BeginAccept( new AsyncCallback(AcceptCallback), listener);
+                    listener.BeginAccept(new AsyncCallback(AcceptCallback), listener);
 
                     // Wait until a connection is made before continuing.  
                     allDone.WaitOne();
@@ -106,19 +101,27 @@ namespace TestServer
             Socket listener = (Socket)ar.AsyncState;
             Socket handler = listener.EndAccept(ar);
 
+            IPEndPoint remoteIPEndPoint = (IPEndPoint)handler.RemoteEndPoint;
+            remoteIPEndPoint.Port = sendPort;
+
             // Create the state object.  
             StateObject state = new StateObject();
             state.workSocket = handler;
 
-            foreach(StateObject item in socketList.stateObjects.Values)
+            if(socketList.Count == 0)
             {
-                if (!item.Equals(state))
+                socketList.Add(socketList.Count, (IPEndPoint)state.workSocket.RemoteEndPoint);
+            } else
+            {
+                for (int i = 0; i < socketList.Count; i++)
                 {
-                    socketList.stateObjects.Add(socketList.count, state);
-                    socketList.count++;
+                    if (!socketList[i].Equals((IPEndPoint)state.workSocket.RemoteEndPoint))
+                    {
+                        socketList.Add(socketList.Count, (IPEndPoint)state.workSocket.RemoteEndPoint);
+                    }
                 }
             }
-            
+
             handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                 new AsyncCallback(ReadCallback), state);
         }
@@ -151,9 +154,13 @@ namespace TestServer
                     Console.WriteLine("Read {0} bytes from socket. \n Data : {1}", content.Length, content);
                     WriteListBoxSafe("Read " + content.Length + " bytes from socket. \n Data : " + content);
                     // Echo the data back to the client.
-                    for(int i = 0; i < count; i++)
+                    for(int i = 0; i < socketList.Count; i++)
                     {
-                        Send(stateObjects[i].workSocket, content);
+                        Socket sender = new Socket(socketList[i].Address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                        sender.BeginConnect(socketList[i], new AsyncCallback(ConnectCallback), sender);
+                        connectDone.WaitOne();
+
+                        Send(sender, content);
                     }
                 }
                 else
@@ -188,6 +195,29 @@ namespace TestServer
                 handler.Shutdown(SocketShutdown.Both);
                 handler.Close();
 
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        }
+
+        private static void ConnectCallback(IAsyncResult ar)
+        {
+            try
+            {
+                // Retrieve the socket from the state object.  
+                Socket client = (Socket)ar.AsyncState;
+
+                // Complete the connection.  
+                client.EndConnect(ar);
+
+                Console.WriteLine("Socket connected to {0}", client.RemoteEndPoint.ToString());
+                WriteListBoxSafe("Socket connected to " + client.RemoteEndPoint.ToString());
+
+                // Signal that the connection has been made.  
+                connectDone.Set();
+                connectDone.Reset();
             }
             catch (Exception e)
             {
