@@ -31,7 +31,6 @@ namespace TestServer
         {
             this.lb_Result = new System.Windows.Forms.ListBox();
             this.btn_Close = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // lb_Result
@@ -53,27 +52,15 @@ namespace TestServer
             this.btn_Close.UseVisualStyleBackColor = true;
             this.btn_Close.Click += new System.EventHandler(this.btn_Close_Click);
             // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(582, 359);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(75, 23);
-            this.button1.TabIndex = 2;
-            this.button1.Text = "button1";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
-            // 
             // TestServerUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 411);
-            this.Controls.Add(this.button1);
             this.Controls.Add(this.btn_Close);
             this.Controls.Add(this.lb_Result);
             this.Name = "TestServerUI";
             this.Text = "TestServer";
-            this.Load += new System.EventHandler(this.TestServerUI_Load);
             this.ResumeLayout(false);
 
         }
@@ -81,6 +68,5 @@ namespace TestServer
         #endregion
         private System.Windows.Forms.Button btn_Close;
         public System.Windows.Forms.ListBox lb_Result;
-        private System.Windows.Forms.Button button1;
     }
 }

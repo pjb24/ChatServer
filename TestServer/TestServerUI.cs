@@ -16,41 +16,25 @@ namespace TestServer
 {
     public partial class TestServerUI : Form
     {
-        public static TestServerUI testServerUI;
-
-        /*Thread workerThread;*/
-
         TcpListener server = null;
         TcpClient clientSocket = null;
         static int counter = 0;
 
         public Dictionary<TcpClient, string> clientList = new Dictionary<TcpClient, string>();
+        public Dictionary<string, string> userList = new Dictionary<string, string>();
 
         public TestServerUI()
         {
             InitializeComponent();
-            testServerUI = this;
-        }
-
-        private void btn_Close_Click(object sender, EventArgs e)
-        {
-            /*workerThread.Interrupt();*/
-            this.Close();
-        }
-
-        private void TestServerUI_Load(object sender, EventArgs e)
-        {
-            //AsynchronousSocketListener server = new AsynchronousSocketListener();
-            //server.LoadServer();
-            /*
-            workerThread = new Thread(AsynchronousSocketListener.StartListening);
-            workerThread.Start();
-            */
-
             // socket start
             Thread t = new Thread(InitSocket);
             t.IsBackground = true;
             t.Start();
+        }
+
+        private void btn_Close_Click(object sender, EventArgs e)
+        {
+            this.Close();
         }
 
         private void InitSocket()
@@ -108,9 +92,51 @@ namespace TestServer
 
         private void OnReceived(string message, string user_name)
         {
-            string displayMessage = "From client : " + user_name + " : " + message;
-            DisplayText(displayMessage);
-            SendMessageAll(message, user_name, true);
+            if (!message.Contains("register") && !message.Contains("signin"))
+            {
+                string displayMessage = "From client : " + user_name + " : " + message;
+                DisplayText(displayMessage);
+                SendMessageAll(message, user_name, true);
+            } else
+            {
+                if (message.Contains("register"))
+                {
+                    string user_ID = message.Substring(0, message.IndexOf("register"));
+                    string user_PW = message.Substring(message.IndexOf("register") + 8);
+                    DisplayText(user_ID + user_PW);
+
+                    if (!userList.ContainsKey(user_ID))
+                    {
+                        userList.Add(user_ID, user_PW);
+                        DisplayText("Register : " + user_ID);
+                    }
+                    else
+                    {
+                        DisplayText(user_ID + " is aleady registered");
+                    }
+                } else if (message.Contains("signin"))
+                {
+                    string user_ID = message.Substring(0, message.IndexOf("signin"));
+                    string user_PW = message.Substring(message.IndexOf("signin") + 6);
+                    DisplayText(user_ID + user_PW);
+
+                    if (!userList.ContainsKey(user_ID))
+                    {
+                        DisplayText(user_ID + " is not registered yet");
+                    }
+                    else
+                    {
+                        if (userList[user_ID].Equals(user_PW))
+                        {
+                            DisplayText(user_ID + " sign in");
+                        } else
+                        {
+                            DisplayText("incorrect PW");
+                        }
+                    }
+                }
+            }
+            
         }
 
         public void SendMessageAll(string message, string user_name, bool flag)
@@ -149,10 +175,8 @@ namespace TestServer
             else
                 lb_Result.Items.Add(text + Environment.NewLine);
         }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-
-        }
     }
 }
+
+// 출처: https://it-jerryfamily.tistory.com/80 [IT 이야기]
+// 출처: https://yeolco.tistory.com/53 [열코의 프로그래밍 일기]
