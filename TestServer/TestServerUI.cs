@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using System.Threading;
 using System.Net;
 using System.Net.Sockets;
+using System.Collections.Generic;
 
 namespace TestServer
 {
@@ -22,6 +23,7 @@ namespace TestServer
 
         public Dictionary<TcpClient, string> clientList = new Dictionary<TcpClient, string>();
         public Dictionary<string, string> userList = new Dictionary<string, string>();
+        public Dictionary<string, Dictionary<string, string>> groupList = new Dictionary<string, Dictionary<string, string>>();
 
         public TestServerUI()
         {
