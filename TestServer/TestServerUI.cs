@@ -11,7 +11,6 @@ using System.Windows.Forms;
 using System.Threading;
 using System.Net;
 using System.Net.Sockets;
-using System.Collections.Generic;
 
 namespace TestServer
 {
@@ -23,7 +22,7 @@ namespace TestServer
 
         public Dictionary<TcpClient, string> clientList = new Dictionary<TcpClient, string>();
         public Dictionary<string, string> userList = new Dictionary<string, string>();
-        public Dictionary<string, Dictionary<string, string>> groupList = new Dictionary<string, Dictionary<string, string>>();
+        public Dictionary<string, List<string>> groupList = new Dictionary<string, List<string>>();
 
         public TestServerUI()
         {
@@ -94,51 +93,107 @@ namespace TestServer
 
         private void OnReceived(string message, string user_name)
         {
-            if (!message.Contains("register") && !message.Contains("signin"))
+            if (message.Contains("register"))
+            {
+                string user_ID = message.Substring(0, message.IndexOf("register"));
+                string user_PW = message.Substring(message.IndexOf("register") + 8);
+                DisplayText(user_ID + user_PW);
+
+                if (!userList.ContainsKey(user_ID))
+                {
+                    userList.Add(user_ID, user_PW);
+                    DisplayText("Register : " + user_ID);
+                }
+                else
+                {
+                    DisplayText(user_ID + " is aleady registered");
+                }
+            }
+            else if (message.Contains("signin"))
+            {
+                string user_ID = message.Substring(0, message.IndexOf("signin"));
+                string user_PW = message.Substring(message.IndexOf("signin") + 6);
+                DisplayText(user_ID + user_PW);
+
+                if (!userList.ContainsKey(user_ID))
+                {
+                    DisplayText(user_ID + " is not registered yet");
+                }
+                else
+                {
+                    if (userList[user_ID].Equals(user_PW))
+                    {
+                        DisplayText(user_ID + " sign in");
+                        string msg = user_ID + "allowSignin";
+
+                        SendMessageClient(msg, user_name, true);
+                    }
+                    else
+                    {
+                        DisplayText("incorrect PW");
+                    }
+                }
+            } // 동기화 할 때 발생
+            else if (message.Contains("requestGroupList"))
+            {
+                string user_ID = message.Substring(0, message.IndexOf("requestGroupList"));
+
+                // 요청한 user_ID가 들어있는 groupList를 추출
+                foreach(var group in groupList)
+                {
+                    var g = group.Value;
+                    // user가 들어있는 group이 있는 개수만큼 msg 발생 1회만 발생하도록 고치자
+                    if (g.Contains(user_ID))
+                    {
+                        string msg = group.Key + "groupList";
+                        SendMessageClient(msg, user_name, true);
+                    }
+                }
+                DisplayText(user_ID);
+            } // 동기화 할 때 발생
+            else if (message.Contains("requestUserList"))
+            {
+                string user_ID = message.Substring(0, message.IndexOf("requestUserList"));
+                string msg = null;
+                // 일단 전체 user_ID 정보 전송
+                foreach(var pair in userList)
+                {
+                    msg = msg + pair.Key + "&";
+                }
+                msg = msg + "userID";
+                SendMessageClient(msg, user_name, true);
+
+                DisplayText(user_ID);
+            }
+            else if (message.Contains("createGroup"))
+            {
+                string msg = message.Substring(0, message.LastIndexOf("&"));
+
+                string user_ID = message.Substring(message.LastIndexOf("&"));
+
+                // user_ID 자르기
+                string[] users = msg.Split('&');
+                
+                List<string> usersInGroup = new List<string>();
+                foreach(string user in users)
+                {
+                    usersInGroup.Add(user);
+                }
+                // groupList에 추가
+                groupList.Add(msg+"Group", usersInGroup);
+
+                // group 생성 완료 message 전송
+                DisplayText(msg);
+                msg = user_ID + "completeCreateGroup";
+                SendMessageClient(msg, user_name, true);
+            }
+            // send message
+            else
             {
                 string displayMessage = "From client : " + user_name + " : " + message;
                 DisplayText(displayMessage);
                 SendMessageAll(message, user_name, true);
-            } else
-            {
-                if (message.Contains("register"))
-                {
-                    string user_ID = message.Substring(0, message.IndexOf("register"));
-                    string user_PW = message.Substring(message.IndexOf("register") + 8);
-                    DisplayText(user_ID + user_PW);
-
-                    if (!userList.ContainsKey(user_ID))
-                    {
-                        userList.Add(user_ID, user_PW);
-                        DisplayText("Register : " + user_ID);
-                    }
-                    else
-                    {
-                        DisplayText(user_ID + " is aleady registered");
-                    }
-                } else if (message.Contains("signin"))
-                {
-                    string user_ID = message.Substring(0, message.IndexOf("signin"));
-                    string user_PW = message.Substring(message.IndexOf("signin") + 6);
-                    DisplayText(user_ID + user_PW);
-
-                    if (!userList.ContainsKey(user_ID))
-                    {
-                        DisplayText(user_ID + " is not registered yet");
-                    }
-                    else
-                    {
-                        if (userList[user_ID].Equals(user_PW))
-                        {
-                            DisplayText(user_ID + " sign in");
-                        } else
-                        {
-                            DisplayText("incorrect PW");
-                        }
-                    }
-                }
             }
-            
         }
 
         public void SendMessageAll(string message, string user_name, bool flag)
@@ -176,6 +231,28 @@ namespace TestServer
             }
             else
                 lb_Result.Items.Add(text + Environment.NewLine);
+        }
+
+        public void SendMessageClient(string message, string user_name, bool flag)
+        {
+            foreach (var pair in clientList)
+            {
+                if (pair.Value.Equals(user_name))
+                {
+                    Console.WriteLine(string.Format("tcpclient : {0} user_name : {1}", pair.Key, pair.Value));
+                    DisplayText("tcpclient : " + pair.Key + " user_name : " + pair.Value);
+
+                    // message 받을 client
+                    TcpClient client = pair.Key as TcpClient;
+                    NetworkStream stream = client.GetStream();
+                    byte[] buffer = null;
+
+                    buffer = Encoding.Unicode.GetBytes(message);
+
+                    stream.Write(buffer, 0, buffer.Length);
+                    stream.Flush();
+                }
+            }
         }
     }
 }
