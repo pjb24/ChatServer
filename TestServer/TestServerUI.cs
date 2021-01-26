@@ -101,9 +101,11 @@ namespace TestServer
         {
             if (message.Contains("register"))
             {
-                string user_ID = message.Substring(0, message.IndexOf("register"));
-                string user_PW = message.Substring(message.IndexOf("register") + 8);
-                DisplayText(user_ID + user_PW);
+                string msg = message.Substring(0, message.LastIndexOf("register"));
+
+                string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
+                string user_PW = msg.Substring(msg.LastIndexOf("&"));
+                DisplayText(user_ID + "&" + user_PW);
 
                 if (!userList.ContainsKey(user_ID))
                 {
