@@ -136,7 +136,7 @@ namespace TestServer
             } // 동기화 할 때 발생
             else if (message.Contains("requestGroupList"))
             {
-                string user_ID = message.Substring(0, message.IndexOf("requestGroupList"));
+                string user_ID = message.Substring(0, message.LastIndexOf("requestGroupList"));
 
                 // 요청한 user_ID가 들어있는 groupList를 추출
                 foreach(var group in groupList)
@@ -153,7 +153,7 @@ namespace TestServer
             } // 동기화 할 때 발생
             else if (message.Contains("requestUserList"))
             {
-                string user_ID = message.Substring(0, message.IndexOf("requestUserList"));
+                string user_ID = message.Substring(0, message.LastIndexOf("requestUserList"));
                 string msg = null;
                 // 일단 전체 user_ID 정보 전송
                 foreach(var pair in userList)
@@ -169,7 +169,8 @@ namespace TestServer
             {
                 string msg = message.Substring(0, message.LastIndexOf("&"));
 
-                string user_ID = message.Substring(message.LastIndexOf("&"));
+                string user_ID = message.Substring(message.LastIndexOf("&") +1);
+                user_ID = user_ID.Substring(0, user_ID.LastIndexOf("createGroup"));
 
                 // user_ID 자르기
                 string[] users = msg.Split('&');
