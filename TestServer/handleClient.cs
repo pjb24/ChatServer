@@ -13,12 +13,10 @@ namespace TestServer
     class handleClient
     {
         TcpClient clientSocket = null;
-        public Dictionary<TcpClient, string> clientList = null;
 
-        public void startClient(TcpClient clientSocket, Dictionary<TcpClient, string> clientList)
+        public void startClient(TcpClient clientSocket)
         {
             this.clientSocket = clientSocket;
-            this.clientList = clientList;
 
             Thread t_hanlder = new Thread(doChat);
             t_hanlder.IsBackground = true;
@@ -50,7 +48,7 @@ namespace TestServer
                     msg = msg.Substring(0, msg.IndexOf("$"));
 
                     if (OnReceived != null)
-                        OnReceived(msg, clientList[clientSocket].ToString());
+                        OnReceived(msg, "");
                 }
             }
             catch (SocketException se)

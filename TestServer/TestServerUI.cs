@@ -20,9 +20,9 @@ namespace TestServer
         TcpClient clientSocket = null;
         static int counter = 0;
 
-        public Dictionary<TcpClient, string> clientList = new Dictionary<TcpClient, string>();
-        public Dictionary<string, string> userList = new Dictionary<string, string>();
-        public Dictionary<string, List<string>> groupList = new Dictionary<string, List<string>>();
+        Dictionary<string, TcpClient> clientList = new Dictionary<string, TcpClient>();
+        Dictionary<string, string> userList = new Dictionary<string, string>();
+        Dictionary<string, List<string>> groupList = new Dictionary<string, List<string>>();
 
         public TestServerUI()
         {
@@ -59,15 +59,13 @@ namespace TestServer
                     string user_name = Encoding.Unicode.GetString(buffer, 0, bytes);
                     user_name = user_name.Substring(0, user_name.IndexOf("$"));
 
-                    clientList.Add(clientSocket, user_name);
-
                     // send message all user
                     SendMessageAll(user_name + " Joined ", "", false);
 
                     handleClient h_client = new handleClient();
                     h_client.OnReceived += new handleClient.MessageDisplayHandler(OnReceived);
                     h_client.OnDisconnected += new handleClient.DisconnectedHandler(h_client_OnDisconnected);
-                    h_client.startClient(clientSocket, clientList);
+                    h_client.startClient(clientSocket);
                 }
                 catch (SocketException se)
                 {
@@ -87,8 +85,16 @@ namespace TestServer
 
         void h_client_OnDisconnected(TcpClient clientSocket)
         {
-            if (clientList.ContainsKey(clientSocket))
-                clientList.Remove(clientSocket);
+            if (clientList.ContainsValue(clientSocket))
+            {
+                foreach(var item in clientList)
+                {
+                    if(item.Value.Equals(clientSocket))
+                    {
+                        clientList.Remove(item.Key);
+                    }
+                }
+            }
         }
 
         private void OnReceived(string message, string user_name)
@@ -125,6 +131,7 @@ namespace TestServer
                     {
                         DisplayText(user_ID + " sign in");
                         string msg = user_ID + "allowSignin";
+                        clientList.Add(user_ID, clientSocket);
 
                         SendMessageClient(msg, user_name, true);
                     }
@@ -201,9 +208,9 @@ namespace TestServer
         {
             foreach (var pair in clientList)
             {
-                Console.WriteLine(string.Format("tcpclient : {0} user_name : {1}", pair.Key, pair.Value));
+                Console.WriteLine(string.Format("tcpclient : {0} user_name : {1}", pair.Value, pair.Key));
 
-                TcpClient client = pair.Key as TcpClient;
+                TcpClient client = pair.Value as TcpClient;
                 NetworkStream stream = client.GetStream();
                 byte[] buffer = null;
 
@@ -240,11 +247,11 @@ namespace TestServer
             {
                 if (pair.Value.Equals(user_name))
                 {
-                    Console.WriteLine(string.Format("tcpclient : {0} user_name : {1}", pair.Key, pair.Value));
-                    DisplayText("tcpclient : " + pair.Key + " user_name : " + pair.Value);
+                    Console.WriteLine(string.Format("tcpclient : {0} user_name : {1}", pair.Value, pair.Key));
+                    DisplayText("tcpclient : " + pair.Value + " user_name : " + pair.Key);
 
                     // message 받을 client
-                    TcpClient client = pair.Key as TcpClient;
+                    TcpClient client = pair.Value as TcpClient;
                     NetworkStream stream = client.GetStream();
                     byte[] buffer = null;
 
