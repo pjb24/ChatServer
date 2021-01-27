@@ -23,7 +23,7 @@ namespace TestServer
             t_hanlder.Start();
         }
 
-        public delegate void MessageDisplayHandler(string message, string user_name);
+        public delegate void MessageDisplayHandler(string message, TcpClient client);
         public event MessageDisplayHandler OnReceived;
 
         public delegate void DisconnectedHandler(TcpClient clientSocket);
@@ -48,7 +48,7 @@ namespace TestServer
                     msg = msg.Substring(0, msg.IndexOf("$"));
 
                     if (OnReceived != null)
-                        OnReceived(msg, "");
+                        OnReceived(msg, clientSocket);
                 }
             }
             catch (SocketException se)
