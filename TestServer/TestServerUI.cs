@@ -1,15 +1,20 @@
 ﻿using System;
+// List, Dictionary, ...
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+// Encoding
 using System.Text;
+// 비동기 작업에 사용?
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using System.Threading;
+// IPAddress
 using System.Net;
+// TcpListener, TcpClient, NetworkStream
 using System.Net.Sockets;
 
 namespace TestServer
@@ -20,28 +25,37 @@ namespace TestServer
         TcpClient clientSocket = null;
         static int counter = 0;
 
+        // <ID, Socket>
         Dictionary<string, TcpClient> clientList = new Dictionary<string, TcpClient>();
+        // <ID, PW>
         Dictionary<string, string> userList = new Dictionary<string, string>();
+        // <groupname, <ID>>
         Dictionary<string, List<string>> groupList = new Dictionary<string, List<string>>();
 
         public TestServerUI()
         {
             InitializeComponent();
-            // socket start
+            // Server Thread
             Thread t = new Thread(InitSocket);
+            // background option
             t.IsBackground = true;
+            // Thread start
             t.Start();
         }
 
         private void btn_Close_Click(object sender, EventArgs e)
         {
+            // Thread들의 상태는 어떻게 변경되는가?
             this.Close();
         }
 
         private void InitSocket()
         {
+            // TcpListener class 사용, 11000포트로 들어오는 모든 IP 요청을 받는다
             server = new TcpListener(IPAddress.Any, 11000);
+            // 초기화
             clientSocket = default(TcpClient);
+            // Listen start
             server.Start();
             DisplayText(">> Server Started");
 
@@ -50,28 +64,40 @@ namespace TestServer
                 try
                 {
                     counter++;
+                    // accept된 client socket 정보 저장
                     clientSocket = server.AcceptTcpClient();
                     DisplayText(">> Accept connection from client");
 
+                    // 통신에 필요한 정보 TCP - stream, UDP - datagram
                     NetworkStream stream = clientSocket.GetStream();
+                    // 버퍼 생성 1024 byte - 1kb
                     byte[] buffer = new byte[1024];
+                    // buffer에 들어온 정보를 읽고 그 크기를 반환
                     int bytes = stream.Read(buffer, 0, buffer.Length);
+                    // buffer에 들어온 정보를 Unicode로 변환
                     string user_name = Encoding.Unicode.GetString(buffer, 0, bytes);
+                    // string msg = Encoding.Unicode.GetString(buffer, 0, buffer.Length);
+                    // message에서 유효정보 자르기
                     user_name = user_name.Substring(0, user_name.IndexOf("$"));
 
-                    // send message all user
+                    // send message all user, 현재 의미 없음
                     SendMessageAll(user_name + " Joined ", "", false);
 
+                    // handleClient 객체 생성
                     handleClient h_client = new handleClient();
+                    // 이벤트 할당, 가입?
                     h_client.OnReceived += new handleClient.MessageDisplayHandler(OnReceived);
                     h_client.OnDisconnected += new handleClient.DisconnectedHandler(h_client_OnDisconnected);
+                    // 객체의 함수 사용
                     h_client.startClient(clientSocket);
                 }
+                // socket 오류
                 catch (SocketException se)
                 {
                     Console.WriteLine(string.Format("InitSocket - SocketException : {0}", se.Message));
                     break;
                 }
+                // socket 오류를 제외한 오류들
                 catch (Exception ex)
                 {
                     Console.WriteLine(string.Format("InitSocket - Exception : {0}", ex.Message));
@@ -79,10 +105,12 @@ namespace TestServer
                 }
             }
 
+            // 오류 발생할 때 종료
             clientSocket.Close();
             server.Stop();
         }
 
+        // clientList가 있으면 해당 자료 제거
         void h_client_OnDisconnected(TcpClient clientSocket)
         {
             if (clientList.ContainsValue(clientSocket))
@@ -104,6 +132,7 @@ namespace TestServer
             }
         }
 
+        // received message 처리
         private void OnReceived(string message, TcpClient client)
         {
             if (message.Contains("register"))
@@ -114,16 +143,19 @@ namespace TestServer
                 string user_PW = msg.Substring(msg.LastIndexOf("&"));
                 DisplayText(user_ID + "&" + user_PW);
 
+                // 중복 확인
                 if (!userList.ContainsKey(user_ID))
                 {
                     userList.Add(user_ID, user_PW);
                     DisplayText("Register : " + user_ID);
 
                     string sendMsg = user_ID + " is register";
+                    // clientList에 등록된 사용자가 아니기 때문에 TcpClient 정보를 사용
                     SendMessageClient(sendMsg, client);
                 }
                 else
                 {
+                    // 사용자에게 보내기도 필요
                     DisplayText(user_ID + " is aleady registered");
                 }
             }
@@ -137,6 +169,7 @@ namespace TestServer
 
                 if (!userList.ContainsKey(user_ID))
                 {
+                    // 사용자에게 보내기 필요
                     DisplayText(user_ID + " is not registered");
                 }
                 else
@@ -151,6 +184,7 @@ namespace TestServer
                     }
                     else
                     {
+                        // 사용자에게 보내기 필요
                         DisplayText("incorrect PW");
                     }
                 }
@@ -263,6 +297,7 @@ namespace TestServer
             }
         }
 
+        // 크로스스레드 문제
         private void DisplayText(string text)
         {
             if (lb_Result.InvokeRequired)
