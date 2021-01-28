@@ -85,7 +85,7 @@ namespace TestServer
 
                     // handleClient 객체 생성
                     handleClient h_client = new handleClient();
-                    // 이벤트 할당, 가입?
+                    // 이벤트 할당, 가입?, this.OnReceived 함수를 h_client.OnReceived에 할당
                     h_client.OnReceived += new handleClient.MessageDisplayHandler(OnReceived);
                     h_client.OnDisconnected += new handleClient.DisconnectedHandler(h_client_OnDisconnected);
                     // 객체의 함수 사용
@@ -246,6 +246,7 @@ namespace TestServer
                 groupList.Add(group+"Group", usersInGroup);
 
                 // group 생성 완료 message 전송, 현재는 생성 요청한 user에게만 보냄
+                // group에 포함된 모든 사용자에게 보내도록 수정하자
                 DisplayText(msg);
                 string sendMsg = user_ID + "&completeCreateGroup";
                 SendMessageClient(sendMsg, user_ID);
@@ -265,6 +266,7 @@ namespace TestServer
 
                 string sendMsg = chat + "&" + group + "&" + user_ID + "&groupChat";
 
+                // group에 속한 모든 사용자에게 송출
                 foreach(string user in groupList[group])
                 {
                     SendMessageClient(sendMsg, user);

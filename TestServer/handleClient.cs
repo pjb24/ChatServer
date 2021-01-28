@@ -29,7 +29,7 @@ namespace TestServer
 
         // delegate (대리자) 설정, 매개변수를 전달
         public delegate void MessageDisplayHandler(string message, TcpClient client);
-        // 외부에 이벤트 발생을 알리기 위함
+        // 외부에 이벤트 발생을 알리기 위함, Type - MessageDisplayHandler(string, TcpClient)
         public event MessageDisplayHandler OnReceived;
 
         public delegate void DisconnectedHandler(TcpClient clientSocket);
@@ -56,7 +56,7 @@ namespace TestServer
                     msg = Encoding.Unicode.GetString(buffer, 0, bytes);
                     msg = msg.Substring(0, msg.IndexOf("$"));
 
-                    // OnReceived에 msg와 socket 전달, OnReceived에서 메시지 처리
+                    // OnReceived 이벤트 발생, MessageDisplayHandler delegate에 msg와 clientSocket 전달, OnReceived에서 메시지 처리
                     if (OnReceived != null)
                         OnReceived(msg, clientSocket);
                 }
