@@ -44,7 +44,7 @@ namespace TestServer
             // 
             // btn_Close
             // 
-            this.btn_Close.Location = new System.Drawing.Point(698, 369);
+            this.btn_Close.Location = new System.Drawing.Point(698, 324);
             this.btn_Close.Name = "btn_Close";
             this.btn_Close.Size = new System.Drawing.Size(90, 30);
             this.btn_Close.TabIndex = 1;
@@ -56,7 +56,7 @@ namespace TestServer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 411);
+            this.ClientSize = new System.Drawing.Size(800, 374);
             this.Controls.Add(this.btn_Close);
             this.Controls.Add(this.lb_Result);
             this.Name = "TestServerUI";

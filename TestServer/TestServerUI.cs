@@ -307,10 +307,15 @@ namespace TestServer
                 lb_Result.BeginInvoke(new MethodInvoker(delegate
                 {
                     lb_Result.Items.Add(text + Environment.NewLine);
+                    // 마지막 줄로 이동
+                    lb_Result.SelectedIndex = lb_Result.Items.Count - 1;
                 }));
             }
             else
+            {
                 lb_Result.Items.Add(text + Environment.NewLine);
+                lb_Result.SelectedIndex = lb_Result.Items.Count - 1;
+            }
         }
 
         // clientList에 등록된 사용자에게 보내는 메시지
