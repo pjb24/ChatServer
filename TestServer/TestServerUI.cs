@@ -68,6 +68,7 @@ namespace TestServer
                     clientSocket = server.AcceptTcpClient();
                     DisplayText(">> Accept connection from client");
 
+                    /*
                     // 통신에 필요한 정보 TCP - stream, UDP - datagram
                     NetworkStream stream = clientSocket.GetStream();
                     // 버퍼 생성 1024 byte - 1kb
@@ -79,9 +80,10 @@ namespace TestServer
                     // string msg = Encoding.Unicode.GetString(buffer, 0, buffer.Length);
                     // message에서 유효정보 자르기
                     user_name = user_name.Substring(0, user_name.IndexOf("$"));
+                    */
 
                     // send message all user, 현재 의미 없음
-                    SendMessageAll(user_name + " Joined ", "", false);
+                    // SendMessageAll(user_name + " Joined ", "", false);
 
                     // handleClient 객체 생성
                     handleClient h_client = new handleClient();
