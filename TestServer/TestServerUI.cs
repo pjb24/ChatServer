@@ -158,7 +158,10 @@ namespace TestServer
                 else
                 {
                     // 사용자에게 보내기도 필요
-                    DisplayText(user_ID + " is aleady registered");
+                    // 이미 있는 사용자
+                    string sendMsg = user_ID + " is aleady registered";
+                    DisplayText(sendMsg);
+                    SendMessageClient(sendMsg, client);
                 }
             }
             else if (message.Contains("signin"))
@@ -172,7 +175,9 @@ namespace TestServer
                 if (!userList.ContainsKey(user_ID))
                 {
                     // 사용자에게 보내기 필요
-                    DisplayText(user_ID + " is not registered");
+                    string sendMsg = user_ID + " is not registered";
+                    DisplayText(sendMsg);
+                    SendMessageClient(sendMsg, client);
                 }
                 else
                 {
@@ -187,7 +192,9 @@ namespace TestServer
                     else
                     {
                         // 사용자에게 보내기 필요
-                        DisplayText("incorrect PW");
+                        string sendMsg = "incorrect PW";
+                        DisplayText(sendMsg);
+                        SendMessageClient(sendMsg, client);
                     }
                 }
             } // 동기화 할 때 발생
