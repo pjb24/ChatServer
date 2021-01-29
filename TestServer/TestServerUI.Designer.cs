@@ -36,17 +36,19 @@ namespace TestServer
             // lb_Result
             // 
             this.lb_Result.FormattingEnabled = true;
-            this.lb_Result.ItemHeight = 15;
-            this.lb_Result.Location = new System.Drawing.Point(12, 12);
+            this.lb_Result.ItemHeight = 12;
+            this.lb_Result.Location = new System.Drawing.Point(10, 10);
+            this.lb_Result.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.lb_Result.Name = "lb_Result";
-            this.lb_Result.Size = new System.Drawing.Size(776, 289);
+            this.lb_Result.Size = new System.Drawing.Size(680, 232);
             this.lb_Result.TabIndex = 0;
             // 
             // btn_Close
             // 
-            this.btn_Close.Location = new System.Drawing.Point(698, 324);
+            this.btn_Close.Location = new System.Drawing.Point(611, 259);
+            this.btn_Close.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.btn_Close.Name = "btn_Close";
-            this.btn_Close.Size = new System.Drawing.Size(90, 30);
+            this.btn_Close.Size = new System.Drawing.Size(79, 24);
             this.btn_Close.TabIndex = 1;
             this.btn_Close.Text = "닫기";
             this.btn_Close.UseVisualStyleBackColor = true;
@@ -54,13 +56,14 @@ namespace TestServer
             // 
             // TestServerUI
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 374);
+            this.ClientSize = new System.Drawing.Size(700, 299);
             this.Controls.Add(this.btn_Close);
             this.Controls.Add(this.lb_Result);
+            this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "TestServerUI";
-            this.Text = "TestServer";
+            this.Text = "Server";
             this.ResumeLayout(false);
 
         }
