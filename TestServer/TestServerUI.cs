@@ -16,6 +16,7 @@ using System.Threading;
 using System.Net;
 // TcpListener, TcpClient, NetworkStream
 using System.Net.Sockets;
+using System.Configuration;
 
 namespace TestServer
 {
@@ -51,8 +52,12 @@ namespace TestServer
 
         private void InitSocket()
         {
+            IPAddress IP = IPAddress.Parse(ConfigurationManager.AppSettings["IP"]);
+            int port = int.Parse(ConfigurationManager.AppSettings["Port"]);
+            
+
             // TcpListener class 사용, 11000포트로 들어오는 모든 IP 요청을 받는다
-            server = new TcpListener(IPAddress.Any, 11000);
+            server = new TcpListener(IP, port);
             // 초기화
             clientSocket = default(TcpClient);
             // Listen start
@@ -142,7 +147,7 @@ namespace TestServer
                 string msg = message.Substring(0, message.LastIndexOf("register"));
 
                 string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-                string user_PW = msg.Substring(msg.LastIndexOf("&"));
+                string user_PW = msg.Substring(msg.LastIndexOf("&")+1);
                 DisplayText(user_ID + "&" + user_PW);
 
                 // 중복 확인
@@ -169,7 +174,7 @@ namespace TestServer
                 string msg = message.Substring(0, message.LastIndexOf("signin")) ;
 
                 string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-                string user_PW = msg.Substring(msg.LastIndexOf("&"));
+                string user_PW = msg.Substring(msg.LastIndexOf("&")+1);
                 DisplayText(user_ID + "&" + user_PW);
 
                 if (!userList.ContainsKey(user_ID))
