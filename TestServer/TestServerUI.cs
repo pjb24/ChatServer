@@ -124,14 +124,14 @@ namespace TestServer
             {
                 try
                 {
-                    foreach (var item in clientList)
-                    {
-                        if (item.Value.Equals(clientSocket))
+                        foreach (var item in clientList)
                         {
-                            clientList.Remove(item.Key);
-                        }
+                            if (item.Value.Equals(clientSocket))
+                            {
+                                clientList.Remove(item.Key);
+                            }
+                        } 
                     }
-                }
                 catch (InvalidOperationException e)
                 {
                     Console.WriteLine(e);
@@ -147,7 +147,7 @@ namespace TestServer
                 string msg = message.Substring(0, message.LastIndexOf("register"));
 
                 string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-                string user_PW = msg.Substring(msg.LastIndexOf("&")+1);
+                string user_PW = msg.Substring(msg.LastIndexOf("&") + 1);
                 DisplayText(user_ID + "&" + user_PW);
 
                 // 중복 확인
@@ -171,10 +171,10 @@ namespace TestServer
             }
             else if (message.Contains("signin"))
             {
-                string msg = message.Substring(0, message.LastIndexOf("signin")) ;
+                string msg = message.Substring(0, message.LastIndexOf("signin"));
 
                 string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-                string user_PW = msg.Substring(msg.LastIndexOf("&")+1);
+                string user_PW = msg.Substring(msg.LastIndexOf("&") + 1);
                 DisplayText(user_ID + "&" + user_PW);
 
                 if (!userList.ContainsKey(user_ID))
@@ -210,7 +210,7 @@ namespace TestServer
 
                 string sendMsg = null;
                 // 요청한 user_ID가 들어있는 groupList를 추출
-                foreach(var group in groupList)
+                foreach (var group in groupList)
                 {
                     var g = group.Value;
                     if (g.Contains(user_ID))
@@ -229,7 +229,7 @@ namespace TestServer
                 string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
                 string sendMsg = null;
                 // 일단 전체 user_ID 정보 전송, 친구 기능을 넣고 싶음
-                foreach(var pair in userList)
+                foreach (var pair in userList)
                 {
                     if (!pair.Key.Equals(user_ID))
                     {
@@ -245,19 +245,19 @@ namespace TestServer
             {
                 string msg = message.Substring(0, message.LastIndexOf("&createGroup"));
 
-                string user_ID = msg.Substring(msg.LastIndexOf("&") +1);
+                string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
 
                 // user_ID 자르기
                 string[] users = msg.Split('&');
-                
+
                 List<string> usersInGroup = new List<string>();
-                foreach(string user in users)
+                foreach (string user in users)
                 {
                     usersInGroup.Add(user);
                 }
                 string group = msg.Replace('&', '+');
                 // groupList에 추가
-                groupList.Add(group+"Group", usersInGroup);
+                groupList.Add(group + "Group", usersInGroup);
 
                 // group 생성 완료 message 전송, 현재는 생성 요청한 user에게만 보냄
                 // group에 포함된 모든 사용자에게 보내도록 수정하자
@@ -270,10 +270,10 @@ namespace TestServer
             {
                 string msg = message.Substring(0, message.LastIndexOf("&groupChat"));
 
-                string user_ID = msg.Substring(msg.LastIndexOf("&")+1);
+                string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
                 msg = msg.Substring(0, msg.LastIndexOf("&"));
-                
-                string group = msg.Substring(msg.LastIndexOf("&")+1);
+
+                string group = msg.Substring(msg.LastIndexOf("&") + 1);
                 msg = msg.Substring(0, msg.LastIndexOf("&"));
 
                 string chat = msg;
@@ -281,9 +281,22 @@ namespace TestServer
                 string sendMsg = chat + "&" + group + "&" + user_ID + "&groupChat";
 
                 // group에 속한 모든 사용자에게 송출
-                foreach(string user in groupList[group])
+                foreach (string user in groupList[group])
                 {
                     SendMessageClient(sendMsg, user);
+                }
+            }
+            // 로그아웃
+            else if (message.Contains("&SignOut"))
+            {
+                DisplayText(message);
+                string msg = message.Substring(0, message.LastIndexOf("&SignOut"));
+
+                string user_ID = msg;
+                
+                if (clientList.ContainsKey(user_ID))
+                {
+                    clientList.Remove(user_ID);
                 }
             }
         }
