@@ -64,7 +64,7 @@ namespace TestServer
             // 오류 발생 시 OnDisconnected call, socket 닫고, stream 닫기
             catch (SocketException se)
             {
-                Console.WriteLine(string.Format("doChat - SocketException : {0}", se.Message));
+                Console.WriteLine(string.Format("doChat - SocketException : {0}", se.StackTrace));
 
                 if (clientSocket != null)
                 {
@@ -77,7 +77,7 @@ namespace TestServer
             }
             catch (Exception ex)
             {
-                Console.WriteLine(string.Format("doChat - Exception : {0}", ex.Message));
+                Console.WriteLine(string.Format("doChat - Exception : {0}", ex.StackTrace));
 
                 if (clientSocket != null)
                 {
