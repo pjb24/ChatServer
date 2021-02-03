@@ -61,8 +61,11 @@ namespace TestServer
             this.ClientSize = new System.Drawing.Size(700, 299);
             this.Controls.Add(this.btn_Close);
             this.Controls.Add(this.lb_Result);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.MaximizeBox = false;
             this.Name = "TestServerUI";
+            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.Text = "Server";
             this.ResumeLayout(false);
 

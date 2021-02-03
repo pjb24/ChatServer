@@ -159,6 +159,12 @@ namespace TestServer
                     string sendMsg = user_ID + " is register";
                     // clientList에 등록된 사용자가 아니기 때문에 TcpClient 정보를 사용
                     SendMessageClient(sendMsg, client);
+
+                    sendMsg = user_ID + "&responseUserList";
+                    foreach (var temp in clientList.Keys)
+                    {
+                        SendMessageClient(sendMsg, temp);
+                    }
                 }
                 else
                 {
@@ -188,11 +194,20 @@ namespace TestServer
                 {
                     if (userList[user_ID].Equals(user_PW))
                     {
-                        DisplayText(user_ID + " sign in");
-                        string sendMsg = user_ID + "&allowSignin";
-                        clientList.Add(user_ID, clientSocket);
+                        if (!clientList.ContainsKey(user_ID))
+                        {
+                            DisplayText(user_ID + " sign in");
+                            string sendMsg = user_ID + "&allowSignin";
+                            clientList.Add(user_ID, clientSocket);
 
-                        SendMessageClient(sendMsg, user_ID);
+                            SendMessageClient(sendMsg, user_ID);
+                        }
+                        else
+                        {
+                            string sendMsg = user_ID + " is already online";
+
+                            SendMessageClient(sendMsg, client);
+                        }
                     }
                     else
                     {
@@ -210,11 +225,15 @@ namespace TestServer
 
                 string sendMsg = null;
                 // 요청한 user_ID가 들어있는 groupList를 추출
-                foreach (var group in groupList)
+                foreach (KeyValuePair<string, List<string>> group in groupList)
                 {
-                    var g = group.Value;
-                    if (g.Contains(user_ID))
+                    List<string> users = group.Value;
+                    if (users.Contains(user_ID))
                     {
+                        foreach (string user in users)
+                        {
+                            sendMsg = sendMsg + user + "^";
+                        }
                         sendMsg = sendMsg + group.Key + "&";
                     }
                 }
@@ -248,22 +267,40 @@ namespace TestServer
                 string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
 
                 // user_ID 자르기
-                string[] users = msg.Split('&');
+                List<string> users = new List<string>(msg.Split('&'));
+                users.Sort();
+
 
                 List<string> usersInGroup = new List<string>();
                 foreach (string user in users)
                 {
                     usersInGroup.Add(user);
                 }
-                string group = msg.Replace('&', '+');
-                // groupList에 추가
-                groupList.Add(group + "Group", usersInGroup);
 
-                // group 생성 완료 message 전송, 현재는 생성 요청한 user에게만 보냄
-                // group에 포함된 모든 사용자에게 보내도록 수정하자
-                DisplayText(msg);
-                string sendMsg = user_ID + "&completeCreateGroup";
-                SendMessageClient(sendMsg, user_ID);
+                string group = string.Join("+", users);
+                //string group = msg.Replace('&', '+');
+
+                if (!groupList.ContainsKey(group + "Group"))
+                {
+                    // groupList에 추가
+                    groupList.Add(group + "Group", usersInGroup);
+
+                    // group 생성 완료 message 전송, 현재는 생성 요청한 user에게만 보냄
+                    // group에 포함된 모든 사용자에게 보내도록 수정하자
+                    DisplayText(msg);
+                    string sendMsg = user_ID + "&completeCreateGroup";
+
+                    foreach (var temp in usersInGroup)
+                    {
+                        SendMessageClient(sendMsg, temp);
+                    }
+                }
+                else
+                {
+                    string sendMsg = group + "Group" + "&existGroup";
+                    SendMessageClient(sendMsg, user_ID);
+                }
+
             }
             // groupChat
             else if (message.Contains("&groupChat"))
@@ -293,10 +330,53 @@ namespace TestServer
                 string msg = message.Substring(0, message.LastIndexOf("&SignOut"));
 
                 string user_ID = msg;
-                
+
                 if (clientList.ContainsKey(user_ID))
                 {
                     clientList.Remove(user_ID);
+                }
+            }
+            // 채팅방 나가기
+            else if (message.Contains("&LeaveGroup"))
+            {
+                string msg = message.Substring(0, message.LastIndexOf("&LeaveGroup"));
+                string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
+                string group = msg.Substring(0, msg.LastIndexOf("&"));
+
+                groupList[group].Remove(user_ID);
+
+                string sendMsg = group + "&" + user_ID + "&LeaveGroup";
+
+                // 나간 사람에게 송출
+                SendMessageClient(sendMsg, user_ID);
+
+                // group에 속한 모든 사용자에게 송출
+                foreach (string user in groupList[group])
+                {
+                    SendMessageClient(sendMsg, user);
+                }
+            }
+            // 채팅방 초대
+            else if (message.Contains("&Invitation"))
+            {
+                string msg = message.Substring(0, message.LastIndexOf("&Invitation"));
+
+                string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
+                msg = msg.Substring(0, msg.LastIndexOf("&"));
+
+                string group = msg.Substring(msg.LastIndexOf("&") + 1);
+                msg = msg.Substring(0, msg.LastIndexOf("&"));
+
+                List<string> InvitedUsers = msg.Split('&').ToList<string>();
+
+                foreach(var user in InvitedUsers)
+                {
+                    groupList[group].Add(user);
+                }
+
+                foreach(var user in groupList[group])
+                {
+                    SendMessageClient(message, user);
                 }
             }
         }
