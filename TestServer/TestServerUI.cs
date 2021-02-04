@@ -198,7 +198,7 @@ namespace TestServer
                         {
                             DisplayText(user_ID + " sign in");
                             string sendMsg = user_ID + "&allowSignin";
-                            clientList.Add(user_ID, clientSocket);
+                            clientList.Add(user_ID, client);
 
                             SendMessageClient(sendMsg, user_ID);
                         }
