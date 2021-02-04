@@ -35,8 +35,9 @@ namespace TestServer
             // 
             // lb_Result
             // 
+            this.lb_Result.Font = new System.Drawing.Font("굴림", 14F);
             this.lb_Result.FormattingEnabled = true;
-            this.lb_Result.ItemHeight = 12;
+            this.lb_Result.ItemHeight = 19;
             this.lb_Result.Location = new System.Drawing.Point(10, 10);
             this.lb_Result.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.lb_Result.Name = "lb_Result";
@@ -58,6 +59,7 @@ namespace TestServer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(46)))), ((int)(((byte)(46)))), ((int)(((byte)(46)))));
             this.ClientSize = new System.Drawing.Size(700, 299);
             this.Controls.Add(this.btn_Close);
             this.Controls.Add(this.lb_Result);
