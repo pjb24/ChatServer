@@ -17,15 +17,20 @@ using System.Net;
 // TcpListener, TcpClient, NetworkStream
 using System.Net.Sockets;
 using System.Configuration;
+using System.IO;
+
+using log4net;
 
 namespace TestServer
 {
     public partial class TestServerUI : Form
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(TestServerUI));
+
         TcpListener server = null;
         TcpClient clientSocket = null;
         static int counter = 0;
-
+        
         // <ID, Socket>
         Dictionary<string, TcpClient> clientList = new Dictionary<string, TcpClient>();
         // <ID, PW>
@@ -41,6 +46,7 @@ namespace TestServer
             // background option
             t.IsBackground = true;
             // Thread start
+            log.Info("server start");
             t.Start();
         }
 
@@ -161,9 +167,9 @@ namespace TestServer
                     SendMessageClient(sendMsg, client);
 
                     sendMsg = user_ID + "&responseUserList";
-                    foreach (var temp in clientList.Keys)
+                    foreach (var user in clientList.Keys)
                     {
-                        SendMessageClient(sendMsg, temp);
+                        SendMessageClient(sendMsg, user);
                     }
                 }
                 else
@@ -378,6 +384,95 @@ namespace TestServer
                 {
                     SendMessageClient(message, user);
                 }
+            }
+            // 파일 전송
+            else if (message.Contains("&requestSendFile"))
+            {
+                Console.WriteLine(message);
+
+                string msg = message.Substring(0, message.LastIndexOf("&requestSendFile"));
+
+                string user_ID = msg.Substring(msg.LastIndexOf("&"));
+
+                msg = msg.Substring(0, msg.LastIndexOf("&"));
+
+                long fileSize = long.Parse(msg.Substring(msg.LastIndexOf("&")));
+
+                string fileName = msg.Substring(0, msg.LastIndexOf("&"));
+
+                string dir = System.Windows.Forms.Application.StartupPath + "\\file";
+                if (Directory.Exists(dir) == false)
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                FileStream file = new FileStream(dir + "\\" + fileName, FileMode.Create);
+
+                /*
+                string sendMsg = "&responseSendFile";
+
+                SendMessageClient(sendMsg, user_ID);
+
+                ushort prevSeq = 0;
+                while ((reqMsg = MessageUtil.Receive(stream)) != null)
+                {
+                    Console.Write("#");
+
+                    // 메시지 순서가 어긋나면 전송 중단
+                    if (prevSeq++ != reqMsg.Header.SEQ)
+                    {
+                        Console.WriteLine("{0}, {1}", prevSeq, reqMsg.Header.SEQ);
+                        break;
+                    }
+
+                    file.Write(reqMsg.Body.GetBytes(), 0, reqMsg.Body.GetSize());
+
+                    // 분할 메시지가 아니면 반복을 한번만하고 빠져나옴
+                    if (reqMsg.Header.FRAGMENTED == CONSTANTS.NOT_FRAGMENTED)
+                        break;
+                    //마지막 메시지면 반복문을 빠져나옴
+                    if (reqMsg.Header.LASTMSG == CONSTANTS.LASTMSG)
+                        break;
+                }
+                long recvFileSize = file.Length;
+                file.Close();
+
+                Console.WriteLine();
+                Console.WriteLine("수신 파일 크기 : {0} bytes", recvFileSize);
+
+                Message rstMsg = new Message();
+                rstMsg.Body = new BodyResult()
+                {
+                    MSGID = reqMsg.Header.MSGID,
+                    RESULT = CONSTANTS.SUCCESS
+                };
+                rstMsg.Header = new Header()
+                {
+                    MSGID = msgid++,
+                    MSGTYPE = CONSTANTS.FILE_SEND_RES,
+                    BODYLEN = (uint)rstMsg.Body.GetSize(),
+                    FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                    LASTMSG = CONSTANTS.LASTMSG,
+                    SEQ = 0
+                };
+
+                if (fileSize == recvFileSize)
+                    // 파일 전송 요청에 담겨온 파일 크기와 실제로 받은 파일 크기를 비교
+                    // 같으면 성공 메지시를 보냄
+                    MessageUtil.Send(stream, rstMsg);
+                else
+                {
+                    rstMsg.Body = new BodyResult()
+                    {
+                        MSGID = reqMsg.Header.MSGID,
+                        RESULT = CONSTANTS.FAIL
+                    };
+
+                    // 파일 크기에 이상이 있다면 실패 메시지를 보냄
+                    MessageUtil.Send(stream, rstMsg);
+                }
+                Console.WriteLine("파일 전송을 마쳤습니다.");
+                */
             }
         }
 
