@@ -20,6 +20,7 @@ using System.Configuration;
 using System.IO;
 
 using log4net;
+using MySql.Data.MySqlClient;
 
 namespace TestServer
 {
@@ -38,9 +39,13 @@ namespace TestServer
         // <groupname, <ID>>
         Dictionary<string, List<string>> groupList = new Dictionary<string, List<string>>();
 
+        static readonly string connStr = ConfigurationManager.ConnectionStrings["mariaDBConnStr"].ConnectionString;
+        static readonly MySqlConnection conn = new MySqlConnection(connStr);
+
         public TestServerUI()
         {
             InitializeComponent();
+
             // Server Thread
             Thread t = new Thread(InitSocket);
             // background option
@@ -53,6 +58,7 @@ namespace TestServer
         private void btn_Close_Click(object sender, EventArgs e)
         {
             // Thread들의 상태는 어떻게 변경되는가?
+            conn.Close();
             this.Close();
         }
 
@@ -130,7 +136,7 @@ namespace TestServer
             {
                 try
                 {
-                        foreach (var item in clientList)
+                        foreach (KeyValuePair<string, TcpClient> item in clientList)
                         {
                             if (item.Value.Equals(clientSocket))
                             {
@@ -167,7 +173,7 @@ namespace TestServer
                     SendMessageClient(sendMsg, client);
 
                     sendMsg = user_ID + "&responseUserList";
-                    foreach (var user in clientList.Keys)
+                    foreach (string user in clientList.Keys)
                     {
                         SendMessageClient(sendMsg, user);
                     }
@@ -254,7 +260,7 @@ namespace TestServer
                 string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
                 string sendMsg = null;
                 // 일단 전체 user_ID 정보 전송, 친구 기능을 넣고 싶음
-                foreach (var pair in userList)
+                foreach (KeyValuePair<string, string> pair in userList)
                 {
                     if (!pair.Key.Equals(user_ID))
                     {
@@ -296,7 +302,7 @@ namespace TestServer
                     DisplayText(msg);
                     string sendMsg = user_ID + "&completeCreateGroup";
 
-                    foreach (var temp in usersInGroup)
+                    foreach (string temp in usersInGroup)
                     {
                         SendMessageClient(sendMsg, temp);
                     }
@@ -375,12 +381,12 @@ namespace TestServer
 
                 List<string> InvitedUsers = msg.Split('&').ToList<string>();
 
-                foreach(var user in InvitedUsers)
+                foreach(string user in InvitedUsers)
                 {
                     groupList[group].Add(user);
                 }
 
-                foreach(var user in groupList[group])
+                foreach(string user in groupList[group])
                 {
                     SendMessageClient(message, user);
                 }
@@ -479,7 +485,7 @@ namespace TestServer
         // clientList에 있는 모든 사용자에게 보내는 메시지, 이게 필요한가?
         public void SendMessageAll(string message, string user_ID, bool flag)
         {
-            foreach (var pair in clientList)
+            foreach (KeyValuePair<string, TcpClient> pair in clientList)
             {
                 Console.WriteLine(string.Format("tcpclient : {0} user_ID : {1}", pair.Value, pair.Key));
 
@@ -523,7 +529,7 @@ namespace TestServer
         // clientList에 등록된 사용자에게 보내는 메시지
         public void SendMessageClient(string message, string user_ID)
         {
-            foreach (var pair in clientList)
+            foreach (KeyValuePair<string, TcpClient> pair in clientList)
             {
                 if (pair.Key.Equals(user_ID))
                 {
