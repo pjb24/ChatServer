@@ -18,6 +18,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Configuration;
 using System.IO;
+using System.Security.Cryptography;
 
 using log4net;
 using MySql.Data.MySqlClient;
@@ -34,13 +35,12 @@ namespace TestServer
         
         // <ID, Socket>
         Dictionary<string, TcpClient> clientList = new Dictionary<string, TcpClient>();
-        // <ID, PW>
-        Dictionary<string, string> userList = new Dictionary<string, string>();
+        // <ID, PW> -> ID 정보만 가지고 PW 정보는 DB에만 저장하게 변경
+        List<string> userList = new List<string>();
         // <groupname, <ID>>
-        Dictionary<string, List<string>> groupList = new Dictionary<string, List<string>>();
+        Dictionary<long, Tuple<string, string>> groupList = new Dictionary<long, Tuple<string, string>>();
 
         static readonly string connStr = ConfigurationManager.ConnectionStrings["mariaDBConnStr"].ConnectionString;
-        static readonly MySqlConnection conn = new MySqlConnection(connStr);
 
         public TestServerUI()
         {
@@ -58,7 +58,6 @@ namespace TestServer
         private void btn_Close_Click(object sender, EventArgs e)
         {
             // Thread들의 상태는 어떻게 변경되는가?
-            conn.Close();
             this.Close();
         }
 
@@ -66,7 +65,43 @@ namespace TestServer
         {
             IPAddress IP = IPAddress.Parse(ConfigurationManager.AppSettings["IP"]);
             int port = int.Parse(ConfigurationManager.AppSettings["Port"]);
-            
+
+            using (MySqlConnection conn = new MySqlConnection(connStr))
+            {
+                conn.Open();
+                string sql = "select userID from users";
+
+                MySqlCommand cmd = new MySqlCommand(sql, conn);
+                MySqlDataReader reader = cmd.ExecuteReader();
+                // log.Info("mariaDB connected");
+                while (reader.Read())
+                {
+                    userList.Add(reader["userID"].ToString());
+                }
+                /* 동작 확인용
+                foreach(string user in userList)
+                {
+                    Console.WriteLine("ID : " + user);
+                } */
+                reader.Close();
+
+                sql = "select * from encryptedroom";
+                cmd.CommandText = sql;
+
+                reader = cmd.ExecuteReader();                
+                while (reader.Read())
+                {
+                    // userID 복호화
+                    string usersInGroup = AESDecrypt256(reader["userID"].ToString(), "0");
+                    groupList.Add(long.Parse(reader["pid"].ToString()), new Tuple<string, string>(reader["roomName"].ToString(), usersInGroup));
+                }
+                // 동작 확인용
+                foreach(KeyValuePair<long, Tuple<string, string>> temp in groupList)
+                {
+                    Console.WriteLine("pid : " + temp.Key + " roomName : " + temp.Value.Item1 + " users : " + temp.Value.Item2);
+                }
+                reader.Close();
+            }
 
             // TcpListener class 사용, 11000포트로 들어오는 모든 IP 요청을 받는다
             server = new TcpListener(IP, port);
@@ -163,15 +198,26 @@ namespace TestServer
                 DisplayText(user_ID + "&" + user_PW);
 
                 // 중복 확인
-                if (!userList.ContainsKey(user_ID))
+                if (!userList.Contains(user_ID))
                 {
-                    userList.Add(user_ID, user_PW);
+                    // 회원 추가
+                    using (MySqlConnection conn = new MySqlConnection(connStr))
+                    {
+                        conn.Open();
+                        string sql = string.Format("insert into users values ('{0}', '{1}')", user_ID, user_PW);
+
+                        MySqlCommand cmd = new MySqlCommand(sql, conn);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    userList.Add(user_ID);
                     DisplayText("Register : " + user_ID);
 
                     string sendMsg = user_ID + " is register";
                     // clientList에 등록된 사용자가 아니기 때문에 TcpClient 정보를 사용
                     SendMessageClient(sendMsg, client);
 
+                    // 로그인 중인 사용자에게 새로운 회원이 생겼음을 알림
                     sendMsg = user_ID + "&responseUserList";
                     foreach (string user in clientList.Keys)
                     {
@@ -195,18 +241,32 @@ namespace TestServer
                 string user_PW = msg.Substring(msg.LastIndexOf("&") + 1);
                 DisplayText(user_ID + "&" + user_PW);
 
-                if (!userList.ContainsKey(user_ID))
+                // 등록된 회원인지 판정
+                if (!userList.Contains(user_ID))
                 {
-                    // 사용자에게 보내기 필요
+                    // 로그인 시도자에게 등록되지 않은 회원 알림
                     string sendMsg = user_ID + " is not registered";
                     DisplayText(sendMsg);
                     SendMessageClient(sendMsg, client);
                 }
                 else
                 {
-                    if (userList[user_ID].Equals(user_PW))
+                    // 이미 로그인 중인지 판정
+                    if (!clientList.ContainsKey(user_ID))
                     {
-                        if (!clientList.ContainsKey(user_ID))
+                        int isCorrect = 0;
+                        // DB에서 비밀번호 확인 쿼리
+                        using (MySqlConnection conn = new MySqlConnection(connStr))
+                        {
+                            conn.Open();
+                            string sql = string.Format("select count(userID) from users where userID='{0}' and userPW='{1}'", user_ID, user_PW);
+
+                            MySqlCommand cmd = new MySqlCommand(sql, conn);
+                            isCorrect = Convert.ToInt32(cmd.ExecuteScalar());
+                            Console.WriteLine(isCorrect);
+                        }
+
+                        if (Convert.ToBoolean(isCorrect))
                         {
                             DisplayText(user_ID + " sign in");
                             string sendMsg = user_ID + "&allowSignin";
@@ -216,16 +276,17 @@ namespace TestServer
                         }
                         else
                         {
-                            string sendMsg = user_ID + " is already online";
-
+                            // 로그인 시도자에게 비밀번호가 맞지 않음 알림
+                            string sendMsg = "incorrect PW";
+                            DisplayText(sendMsg);
                             SendMessageClient(sendMsg, client);
                         }
                     }
+                    // 회원이 이미 로그인 중
                     else
                     {
-                        // 사용자에게 보내기 필요
-                        string sendMsg = "incorrect PW";
-                        DisplayText(sendMsg);
+                        string sendMsg = user_ID + " is already online";
+
                         SendMessageClient(sendMsg, client);
                     }
                 }
@@ -237,16 +298,13 @@ namespace TestServer
 
                 string sendMsg = null;
                 // 요청한 user_ID가 들어있는 groupList를 추출
-                foreach (KeyValuePair<string, List<string>> group in groupList)
+                foreach (KeyValuePair<long, Tuple<string, string>> group in groupList)
                 {
-                    List<string> users = group.Value;
+                    string[] delimiterChars = { ", " };
+                    string[] users = group.Value.Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
                     if (users.Contains(user_ID))
                     {
-                        foreach (string user in users)
-                        {
-                            sendMsg = sendMsg + user + "^";
-                        }
-                        sendMsg = sendMsg + group.Key + "&";
+                        sendMsg = sendMsg + group.Key + "^" + group.Value.Item1 + "^" + group.Value.Item2 + "&";
                     }
                 }
                 sendMsg = sendMsg + "responseGroupList";
@@ -260,11 +318,11 @@ namespace TestServer
                 string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
                 string sendMsg = null;
                 // 일단 전체 user_ID 정보 전송, 친구 기능을 넣고 싶음
-                foreach (KeyValuePair<string, string> pair in userList)
+                foreach (string user in userList)
                 {
-                    if (!pair.Key.Equals(user_ID))
+                    if (!user.Equals(user_ID))
                     {
-                        sendMsg = sendMsg + pair.Key + "&";
+                        sendMsg = sendMsg + user + "&";
                     }
                 }
                 sendMsg = sendMsg + "responseUserList";
@@ -272,47 +330,54 @@ namespace TestServer
 
                 DisplayText(user_ID);
             }
+            // 채팅방 생성
             else if (message.Contains("createGroup"))
             {
                 string msg = message.Substring(0, message.LastIndexOf("&createGroup"));
 
                 string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
+                msg = msg.Substring(0, msg.LastIndexOf("&"));
 
-                // user_ID 자르기
-                List<string> users = new List<string>(msg.Split('&'));
-                users.Sort();
+                // string encryptedGroup = msg.Substring(msg.LastIndexOf("&") + 1);
+                string group = msg.Substring(msg.LastIndexOf("&") + 1);
 
+                string groupName = msg.Substring(0, msg.LastIndexOf("&"));
 
-                List<string> usersInGroup = new List<string>();
+                // group 부호화
+                string encryptedGroup = AESEncrypt256(group, "0");
+
+                // DB에 채팅방 추가
+                // insert 완료하면 pid 가져와서 저장하기
+
+                // DB insert
+                long pid = 0;
+                using (MySqlConnection conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    string sql = string.Format("insert into encryptedroom (roomName, userID) values ('{0}', '{1}')", groupName, encryptedGroup);
+
+                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                    cmd.ExecuteNonQuery();
+                    pid = cmd.LastInsertedId;
+                }
+
+                // groupList에 추가
+                groupList.Add(pid, new Tuple<string, string>(groupName, group));
+
+                log.Info(groupList[pid]);
+                string sendMsg = user_ID + "&completeCreateGroup";
+
+                // encryptedGroup 복호화
+                // string usersInGroup = AESDecrypt256(encryptedGroup, "0");
+                string[] delimiterChars = { ", "};
+                // string[] users = usersInGroup.Split(delimiterChars);
+                string[] users = group.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+
+                // 채팅방 인원에게 채팅방 생성 완료 메시지 발송
                 foreach (string user in users)
                 {
-                    usersInGroup.Add(user);
+                    SendMessageClient(sendMsg, user);
                 }
-
-                string group = string.Join("+", users);
-                //string group = msg.Replace('&', '+');
-
-                if (!groupList.ContainsKey(group + "Group"))
-                {
-                    // groupList에 추가
-                    groupList.Add(group + "Group", usersInGroup);
-
-                    // group 생성 완료 message 전송, 현재는 생성 요청한 user에게만 보냄
-                    // group에 포함된 모든 사용자에게 보내도록 수정하자
-                    DisplayText(msg);
-                    string sendMsg = user_ID + "&completeCreateGroup";
-
-                    foreach (string temp in usersInGroup)
-                    {
-                        SendMessageClient(sendMsg, temp);
-                    }
-                }
-                else
-                {
-                    string sendMsg = group + "Group" + "&existGroup";
-                    SendMessageClient(sendMsg, user_ID);
-                }
-
             }
             // groupChat
             else if (message.Contains("&groupChat"))
@@ -322,15 +387,18 @@ namespace TestServer
                 string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
                 msg = msg.Substring(0, msg.LastIndexOf("&"));
 
-                string group = msg.Substring(msg.LastIndexOf("&") + 1);
+                long pid = long.Parse(msg.Substring(msg.LastIndexOf("&") + 1));
                 msg = msg.Substring(0, msg.LastIndexOf("&"));
 
                 string chat = msg;
 
-                string sendMsg = chat + "&" + group + "&" + user_ID + "&groupChat";
+                string sendMsg = chat + "&" + pid + "&" + user_ID + "&groupChat";
 
                 // group에 속한 모든 사용자에게 송출
-                foreach (string user in groupList[group])
+                string[] delimiterChars = { ", " };
+                List<string> usersInGroup = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+
+                foreach (string user in usersInGroup)
                 {
                     SendMessageClient(sendMsg, user);
                 }
@@ -348,27 +416,45 @@ namespace TestServer
                     clientList.Remove(user_ID);
                 }
             }
-            // 채팅방 나가기
+            // 채팅방 나가기 - 채팅방 이름도 변경되게 바꾸기
             else if (message.Contains("&LeaveGroup"))
             {
                 string msg = message.Substring(0, message.LastIndexOf("&LeaveGroup"));
                 string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
-                string group = msg.Substring(0, msg.LastIndexOf("&"));
+                long pid = long.Parse(msg.Substring(0, msg.LastIndexOf("&")));
 
-                groupList[group].Remove(user_ID);
+                // DB 변경
+                string[] delimiterChars = { ", " };
+                List<string> users = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
 
-                string sendMsg = group + "&" + user_ID + "&LeaveGroup";
+                users.Remove(user_ID);
+                string usersInGroup = string.Join(", ", users);
+                string encryptedGroup = AESEncrypt256(usersInGroup, "0");
+
+                using (MySqlConnection conn = new MySqlConnection(connStr))
+                {
+                    conn.Open();
+                    string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, pid);
+
+                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                    cmd.ExecuteNonQuery();
+                }
+
+                // groupList 변경
+                groupList[pid] = new Tuple<string, string>(groupList[pid].Item1, usersInGroup);
+                
+                string sendMsg = pid + "&" + user_ID + "&LeaveGroup";
 
                 // 나간 사람에게 송출
                 SendMessageClient(sendMsg, user_ID);
 
                 // group에 속한 모든 사용자에게 송출
-                foreach (string user in groupList[group])
+                foreach (string user in users)
                 {
                     SendMessageClient(sendMsg, user);
                 }
             }
-            // 채팅방 초대
+            // 채팅방 초대 - 채팅방 이름도 변경되게 바꾸기
             else if (message.Contains("&Invitation"))
             {
                 string msg = message.Substring(0, message.LastIndexOf("&Invitation"));
@@ -377,16 +463,39 @@ namespace TestServer
                 msg = msg.Substring(0, msg.LastIndexOf("&"));
 
                 string group = msg.Substring(msg.LastIndexOf("&") + 1);
-                msg = msg.Substring(0, msg.LastIndexOf("&"));
 
-                List<string> InvitedUsers = msg.Split('&').ToList<string>();
+                long pid = long.Parse(msg.Substring(0, msg.LastIndexOf("&")));
 
-                foreach(string user in InvitedUsers)
+                // groupList에서 검색 후 수정
+                string[] delimiterChars = { ", " };
+                List<string> users = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+                string[] invitedUsers = group.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+                users.AddRange(invitedUsers);
+
+                // sort
+                users.Sort();
+
+                // Join
+                string usersInGroup = string.Join(", ", users);
+
+                // 부호화
+                string encryptedGroup = AESEncrypt256(usersInGroup, "0");
+
+                // DB 변경
+                using (MySqlConnection conn = new MySqlConnection(connStr))
                 {
-                    groupList[group].Add(user);
+                    conn.Open();
+                    string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, pid);
+
+                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                    cmd.ExecuteNonQuery();
                 }
 
-                foreach(string user in groupList[group])
+                // groupList 변경
+                groupList[pid] = new Tuple<string, string>(groupList[pid].Item1, usersInGroup);
+
+                // group에 포함된 인원에게 송출
+                foreach (string user in users)
                 {
                     SendMessageClient(message, user);
                 }
@@ -560,6 +669,68 @@ namespace TestServer
 
             stream.Write(buffer, 0, buffer.Length);
             stream.Flush();
+        }
+
+        private string AESEncrypt256(string input, string key)
+        {
+            SHA256Managed sHA256Managed = new SHA256Managed();
+            byte[] salt = sHA256Managed.ComputeHash(Encoding.UTF8.GetBytes(key.Length.ToString()));
+
+            RijndaelManaged aes = new RijndaelManaged();
+            aes.KeySize = 256;
+            aes.BlockSize = 128;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.PKCS7;
+            // aes.Key = Encoding.UTF8.GetBytes(key);
+            aes.Key = salt;
+            aes.IV = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+            ICryptoTransform encrypt = aes.CreateEncryptor(aes.Key, aes.IV);
+            byte[] xBuff = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (CryptoStream cs = new CryptoStream(ms, encrypt, CryptoStreamMode.Write))
+                {
+                    byte[] xXml = Encoding.UTF8.GetBytes(input);
+                    cs.Write(xXml, 0, xXml.Length);
+                }
+
+                xBuff = ms.ToArray();
+            }
+
+            string Output = Convert.ToBase64String(xBuff);
+            return Output;
+        }
+
+        private string AESDecrypt256(string input, string key)
+        {
+            SHA256Managed sHA256Managed = new SHA256Managed();
+            byte[] salt = sHA256Managed.ComputeHash(Encoding.UTF8.GetBytes(key.Length.ToString()));
+
+            RijndaelManaged aes = new RijndaelManaged();
+            aes.KeySize = 256;
+            aes.BlockSize = 128;
+            aes.Mode = CipherMode.CBC;
+            aes.Padding = PaddingMode.PKCS7;
+            // aes.Key = Encoding.UTF8.GetBytes(key);
+            aes.Key = salt;
+            aes.IV = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+            ICryptoTransform decrypt = aes.CreateDecryptor();
+            byte[] xBuff = null;
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (CryptoStream cs = new CryptoStream(ms, decrypt, CryptoStreamMode.Write))
+                {
+                    byte[] xXml = Convert.FromBase64String(input);
+                    cs.Write(xXml, 0, xXml.Length);
+                }
+
+                xBuff = ms.ToArray();
+            }
+
+            string Output = Encoding.UTF8.GetString(xBuff);
+            return Output;
         }
     }
 }
