@@ -7,6 +7,7 @@ using System.Text;
 using System.Windows.Forms;
 
 using System.Collections.Generic;
+using MyMessageProtocol;
 
 namespace TestServer
 {
@@ -28,7 +29,8 @@ namespace TestServer
         }
 
         // delegate (대리자) 설정, 매개변수를 전달
-        public delegate void MessageDisplayHandler(string message, TcpClient client);
+        // public delegate void MessageDisplayHandler(string message, TcpClient client);
+        public delegate void MessageDisplayHandler(PacketMessage message, TcpClient client);
         // 외부에 이벤트 발생을 알리기 위함, Type - MessageDisplayHandler(string, TcpClient)
         public event MessageDisplayHandler OnReceived;
 
@@ -44,7 +46,7 @@ namespace TestServer
                 // 초기화
                 byte[] buffer = new byte[1024];
                 string msg = string.Empty;
-                int bytes = 0;
+                // int bytes = 0;
                 int MessageCount = 0;
 
                 // client message 대기
@@ -52,13 +54,18 @@ namespace TestServer
                 {
                     MessageCount++;
                     stream = clientSocket.GetStream();
+                    /*
                     bytes = stream.Read(buffer, 0, buffer.Length);
                     msg = Encoding.Unicode.GetString(buffer, 0, bytes);
                     msg = msg.Substring(0, msg.IndexOf("$"));
+                    */
+
+                    PacketMessage message = MessageUtil.Receive(stream);
 
                     // OnReceived 이벤트 발생, MessageDisplayHandler delegate에 msg와 clientSocket 전달, OnReceived에서 메시지 처리
                     if (OnReceived != null)
-                        OnReceived(msg, clientSocket);
+                        // OnReceived(msg, clientSocket);
+                        OnReceived(message, clientSocket);
                 }
             }
             // 오류 발생 시 OnDisconnected call, socket 닫고, stream 닫기
