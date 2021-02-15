@@ -14,7 +14,7 @@ namespace MyMessageProtocol
         public RequestRegister() { }
         public RequestRegister(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -32,7 +32,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -44,7 +44,7 @@ namespace MyMessageProtocol
         public ResponseRegisterSuccess() { }
         public ResponseRegisterSuccess(byte[] bytes)
         {
-            userID = BitConverter.ToString(bytes, 0);
+            userID = Encoding.Unicode.GetString(bytes);
         }
 
         public byte[] GetBytes()
@@ -57,7 +57,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return userID.Length;
+            return Encoding.Unicode.GetBytes(userID).Length;
         }
     }
 
@@ -71,7 +71,7 @@ namespace MyMessageProtocol
         public RequestSignIn() { }
         public RequestSignIn(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -93,7 +93,32 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
+        }
+    }
+
+    // 로그아웃 요청 ID
+    public class RequestSignOut : ISerializable
+    {
+        public string userID = string.Empty;
+
+        public RequestSignOut() { }
+        public RequestSignOut(byte[] bytes)
+        {
+            userID = Encoding.Unicode.GetString(bytes);
+        }
+
+        public byte[] GetBytes()
+        {
+            byte[] bytes = new byte[GetSize()];
+            bytes = Encoding.Unicode.GetBytes(userID);
+
+            return bytes;
+        }
+
+        public int GetSize()
+        {
+            return Encoding.Unicode.GetBytes(userID).Length;
         }
     }
 
@@ -101,14 +126,14 @@ namespace MyMessageProtocol
     public class ResponseUserList : ISerializable
     {
         public string msg = string.Empty;
-        public List<string> users = null;
+        public List<string> users = new List<string>();
 
         public ResponseUserList() { }
         public ResponseUserList(byte[] bytes)
         {
             if (bytes.Length != 0)
             {
-                msg = BitConverter.ToString(bytes, 0);
+                msg = Encoding.Unicode.GetString(bytes);
 
                 string[] delimiterChars = { "&" };
                 users = new List<string>(msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
@@ -125,7 +150,32 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
+        }
+    }
+
+    // 채팅방 목록 요청
+    public class RequestGroupList : ISerializable
+    {
+        public string userID = string.Empty;
+
+        public RequestGroupList() { }
+        public RequestGroupList(byte[] bytes)
+        {
+            userID = Encoding.Unicode.GetString(bytes);
+        }
+
+        public byte[] GetBytes()
+        {
+            byte[] bytes = new byte[GetSize()];
+            bytes = Encoding.Unicode.GetBytes(userID);
+
+            return bytes;
+        }
+
+        public int GetSize()
+        {
+            return Encoding.Unicode.GetBytes(userID).Length;
         }
     }
 
@@ -133,15 +183,11 @@ namespace MyMessageProtocol
     public class ResponseGroupList : ISerializable
     {
         public string msg = string.Empty;
-        public List<string> groups = null;
 
         public ResponseGroupList() { }
         public ResponseGroupList(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
-
-            string[] delimiterChars = { "&" };
-            groups = new List<string>(msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+            msg = Encoding.Unicode.GetString(bytes);
         }
 
         public byte[] GetBytes()
@@ -154,7 +200,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -168,7 +214,7 @@ namespace MyMessageProtocol
         public RequestCreateGroup() { }
         public RequestCreateGroup(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -186,7 +232,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -201,7 +247,7 @@ namespace MyMessageProtocol
         public ResponseCreateGroupSuccess() { }
         public ResponseCreateGroupSuccess(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -220,7 +266,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -235,7 +281,7 @@ namespace MyMessageProtocol
         public RequestChat() { }
         public RequestChat(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -254,7 +300,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -269,7 +315,7 @@ namespace MyMessageProtocol
         public ResponseChat() { }
         public ResponseChat(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -288,7 +334,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -297,12 +343,12 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public long pid = 0;
-        public List<string> invitedUsers = null;
+        public List<string> invitedUsers = new List<string>();
 
         public RequestInvitation() { }
         public RequestInvitation(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -321,7 +367,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -330,12 +376,12 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public long pid = 0;
-        public List<string> invitedUsers = null;
+        public List<string> invitedUsers = new List<string>();
 
         public ResponseInvitationSuccess() { }
         public ResponseInvitationSuccess(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -354,7 +400,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -368,7 +414,7 @@ namespace MyMessageProtocol
         public RequestLeaveGroup() { }
         public RequestLeaveGroup(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -386,7 +432,7 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
@@ -400,7 +446,7 @@ namespace MyMessageProtocol
         public ResponseLeaveGroupSuccess() { }
         public ResponseLeaveGroupSuccess(byte[] bytes)
         {
-            msg = BitConverter.ToString(bytes, 0);
+            msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
@@ -418,73 +464,87 @@ namespace MyMessageProtocol
 
         public int GetSize()
         {
-            return msg.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
     // 파일 전송 요청 메시지(0x01)에 사용할 본문 클래스
-    public class BodyRequest : ISerializable
+    public class RequestSendFile : ISerializable
     {
-        public long FILESIZE;
-        public byte[] FILENAME;
+        public string msg = string.Empty;
+        public long pid = 0;
+        public string userID = string.Empty;
+        public long FILESIZE = 0;
+        public string FILENAME = string.Empty;
+        public string filePath = string.Empty;
 
-        public BodyRequest() { }
-        public BodyRequest(byte[] bytes)
+        public RequestSendFile() { }
+        public RequestSendFile(byte[] bytes)
         {
-            FILESIZE = BitConverter.ToInt64(bytes, 0);
-            FILENAME = new byte[bytes.Length - sizeof(long)];
-            Array.Copy(bytes, sizeof(long), FILENAME, 0, FILENAME.Length);
+            msg = Encoding.Unicode.GetString(bytes);
+
+            string[] delimiterChars = { "&" };
+            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+            pid = long.Parse(temp[0]);
+            userID = temp[1];
+            FILESIZE = long.Parse(temp[2]);
+            FILENAME = temp[3];
+            filePath = temp[4];
         }
 
         public byte[] GetBytes()
         {
             byte[] bytes = new byte[GetSize()];
-            byte[] temp = BitConverter.GetBytes(FILESIZE);
-            Array.Copy(temp, 0, bytes, 0, temp.Length);
-            Array.Copy(FILENAME, 0, bytes, temp.Length, FILENAME.Length);
+            bytes = Encoding.Unicode.GetBytes(msg);
 
             return bytes;
         }
 
         public int GetSize()
         {
-            return sizeof(long) + FILENAME.Length;
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 
-    public class BodyResponse : ISerializable
+    public class ResponseSendFile : ISerializable
     {
-        public uint MSGID;
-        public byte RESPONSE;
-        public BodyResponse() { }
-        public BodyResponse(byte[] bytes)
+        public string msg = string.Empty;
+        public uint MSGID = 0;
+        public byte RESPONSE = 0;
+        public string filePath = string.Empty;
+        public ResponseSendFile() { }
+        public ResponseSendFile(byte[] bytes)
         {
-            MSGID = BitConverter.ToUInt32(bytes, 0);
-            RESPONSE = bytes[4];
+            msg = Encoding.Unicode.GetString(bytes);
+
+            string[] delimiterChars = { "&" };
+            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+            MSGID = uint.Parse(temp[0]);
+            RESPONSE = Encoding.Unicode.GetBytes(temp[1])[0];
+            filePath = temp[2];
         }
 
         public byte[] GetBytes()
         {
             byte[] bytes = new byte[GetSize()];
-            byte[] temp = BitConverter.GetBytes(MSGID);
-            Array.Copy(temp, 0, bytes, 0, temp.Length);
-            bytes[temp.Length] = RESPONSE;
+            bytes = Encoding.Unicode.GetBytes(msg);
 
             return bytes;
         }
 
         public int GetSize()
         {
-            return sizeof(uint) + sizeof(byte);
+            return Encoding.Unicode.GetBytes(msg).Length;
+            // return sizeof(uint) + sizeof(byte);
         }
     }
 
     // 실제 파일을 전송하는 메시지(0x03)에 사용할 본문 클래스
-    public class BodyData : ISerializable
+    public class RequestSendFileData : ISerializable
     {
         public byte[] DATA;
 
-        public BodyData(byte[] bytes)
+        public RequestSendFileData(byte[] bytes)
         {
             DATA = new byte[bytes.Length];
             bytes.CopyTo(DATA, 0);
@@ -502,13 +562,13 @@ namespace MyMessageProtocol
     }
 
     // 파일 전송 결과 메시지(0x04)에 사용할 본문 클래스
-    public class BodyResult : ISerializable
+    public class ResponseFileSendComplete : ISerializable
     {
         public uint MSGID;
         public byte RESULT;
 
-        public BodyResult() { }
-        public BodyResult(byte[] bytes)
+        public ResponseFileSendComplete() { }
+        public ResponseFileSendComplete(byte[] bytes)
         {
             MSGID = BitConverter.ToUInt32(bytes, 0);
             RESULT = bytes[4];

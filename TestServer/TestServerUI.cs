@@ -36,11 +36,11 @@ namespace TestServer
         static int counter = 0;
 
         // <ID, Socket>
-        Dictionary<string, TcpClient> clientList = null;
+        Dictionary<string, TcpClient> clientList = new Dictionary<string, TcpClient>();
         // <ID, PW> -> ID 정보만 가지고 PW 정보는 DB에만 저장하게 변경
-        List<string> userList = null;
+        List<string> userList = new List<string>();
         // <groupname, <ID>>
-        Dictionary<long, Tuple<string, string>> groupList = null;
+        Dictionary<long, Tuple<string, string>> groupList = new Dictionary<long, Tuple<string, string>>();
 
         uint msgid = 0;
 
@@ -185,7 +185,7 @@ namespace TestServer
                 }
                 catch (InvalidOperationException e)
                 {
-                    Console.WriteLine(e);
+                    Console.WriteLine(e.StackTrace);
                 }
             }
         }
@@ -766,130 +766,149 @@ namespace TestServer
             {
                 // 회원가입 요청
                 case CONSTANTS.REQ_REGISTER:
-                    RequestRegister reqRegisterBody = (RequestRegister)message.Body;
-
-                    // 중복 확인
-                    if (!userList.Contains(reqRegisterBody.userID))
                     {
-                        // 회원 추가
-                        using (MySqlConnection conn = new MySqlConnection(connStr))
-                        {
-                            conn.Open();
-                            string sql = string.Format("insert into users values ('{0}', '{1}')", reqRegisterBody.userID, reqRegisterBody.userPW);
+                        RequestRegister reqBody = (RequestRegister)message.Body;
 
-                            MySqlCommand cmd = new MySqlCommand(sql, conn);
-                            cmd.ExecuteNonQuery();
-                        }
-
-                        userList.Add(reqRegisterBody.userID);
-                        DisplayText("Register : " + reqRegisterBody.userID);
-
-                        // 회원가입 성공 메시지 작성
-                        PacketMessage resMsg = new PacketMessage();
-                        resMsg.Body = new ResponseRegisterSuccess()
+                        // 중복 확인
+                        if (!userList.Contains(reqBody.userID))
                         {
-                            userID = reqRegisterBody.userID
-                        };
-                        resMsg.Header = new Header()
-                        {
-                            MSGID = msgid++,
-                            MSGTYPE = CONSTANTS.RES_REGISTER_SUCCESS,
-                            BODYLEN = (uint) resMsg.Body.GetSize(),
-                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
-                            LASTMSG = CONSTANTS.LASTMSG,
-                            SEQ = 0
-                        };
-                        // 회원가입 요청자에게 발송
-                        SendMessageClient(resMsg, client);
-
-                        // 로그인 중인 사용자에게 새로운 회원이 생겼음을 알림
-                        foreach (string user in clientList.Keys)
-                        {
-                            SendMessageClient(resMsg, user);
-                        }
-                    }
-                    else
-                    {
-                        // 이미 있는 사용자
-                        PacketMessage resMsg = new PacketMessage();
-                        resMsg.Header = new Header()
-                        {
-                            MSGID = msgid++,
-                            MSGTYPE = CONSTANTS.RES_REGISTER_FAIL_EXIST,
-                            BODYLEN = (uint)resMsg.Body.GetSize(),
-                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
-                            LASTMSG = CONSTANTS.LASTMSG,
-                            SEQ = 0
-                        };
-                        // 회원가입 요청자에게 발송
-                        SendMessageClient(resMsg, client);
-                    }
-                    break;
-                // 로그인 요청
-                case CONSTANTS.REQ_SIGNIN:
-                    RequestSignIn reqSignInBody = (RequestSignIn)message.Body;
-                    
-                    // 등록된 회원인지 판정
-                    if (!userList.Contains(reqSignInBody.userID))
-                    {
-                        // 로그인 시도자에게 등록되지 않은 회원 알림
-                        PacketMessage resMsg = new PacketMessage();
-                        resMsg.Header = new Header()
-                        {
-                            MSGID = msgid++,
-                            MSGTYPE = CONSTANTS.RES_SIGNIN_FAIL_NOT_EXIST,
-                            BODYLEN = 0,
-                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
-                            LASTMSG = CONSTANTS.LASTMSG,
-                            SEQ = 0
-                        };
-                        SendMessageClient(resMsg, client);
-                    }
-                    else
-                    {
-                        // 이미 로그인 중인지 판정
-                        if (!clientList.ContainsKey(reqSignInBody.userID))
-                        {
-                            int isCorrect = 0;
-                            // DB에서 비밀번호 확인 쿼리
+                            // 회원 추가
                             using (MySqlConnection conn = new MySqlConnection(connStr))
                             {
                                 conn.Open();
-                                string sql = string.Format("select count(userID) from users where userID='{0}' and userPW='{1}'", reqSignInBody.userID, reqSignInBody.userPW);
+                                string sql = string.Format("insert into users values ('{0}', '{1}')", reqBody.userID, reqBody.userPW);
 
                                 MySqlCommand cmd = new MySqlCommand(sql, conn);
-                                isCorrect = Convert.ToInt32(cmd.ExecuteScalar());
-                                Console.WriteLine(isCorrect);
+                                cmd.ExecuteNonQuery();
                             }
 
-                            if (Convert.ToBoolean(isCorrect))
+                            userList.Add(reqBody.userID);
+                            DisplayText("Register : " + reqBody.userID);
+
+                            // 회원가입 성공 메시지 작성
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Body = new ResponseRegisterSuccess()
                             {
-                                DisplayText(reqSignInBody.userID + " sign in");
-                                // 온라인 사용자 목록에 추가
-                                clientList.Add(reqSignInBody.userID, client);
+                                userID = reqBody.userID
+                            };
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_REGISTER_SUCCESS,
+                                BODYLEN = (uint)resMsg.Body.GetSize(),
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+                            // 회원가입 요청자에게 발송
+                            SendMessageClient(resMsg, client);
 
-                                // 로그인 완료 메시지 작성 & 발송
-                                PacketMessage resMsg = new PacketMessage();
-                                resMsg.Header = new Header()
-                                {
-                                    MSGID = msgid++,
-                                    MSGTYPE = CONSTANTS.RES_SIGNIN_SUCCESS,
-                                    BODYLEN = 0,
-                                    FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
-                                    LASTMSG = CONSTANTS.LASTMSG,
-                                    SEQ = 0
-                                };
-
-                                SendMessageClient(resMsg, reqSignInBody.userID);
+                            // 로그인 중인 사용자에게 새로운 회원이 생겼음을 알림
+                            foreach (string user in clientList.Keys)
+                            {
+                                SendMessageClient(resMsg, user);
                             }
+                        }
+                        else
+                        {
+                            // 이미 있는 사용자
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_REGISTER_FAIL_EXIST,
+                                BODYLEN = 0,
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+                            // 회원가입 요청자에게 발송
+                            SendMessageClient(resMsg, client);
+                        }
+                        break;
+                    }
+                // 로그인 요청
+                case CONSTANTS.REQ_SIGNIN:
+                    {
+                        RequestSignIn reqBody = (RequestSignIn)message.Body;
+
+                        // 등록된 회원인지 판정
+                        if (!userList.Contains(reqBody.userID))
+                        {
+                            // 로그인 시도자에게 등록되지 않은 회원 알림
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_SIGNIN_FAIL_NOT_EXIST,
+                                BODYLEN = 0,
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+                            SendMessageClient(resMsg, client);
+                        }
+                        else
+                        {
+                            // 이미 로그인 중인지 판정
+                            if (!clientList.ContainsKey(reqBody.userID))
+                            {
+                                int isCorrect = 0;
+                                // DB에서 비밀번호 확인 쿼리
+                                using (MySqlConnection conn = new MySqlConnection(connStr))
+                                {
+                                    conn.Open();
+                                    string sql = string.Format("select count(userID) from users where userID='{0}' and userPW='{1}'", reqBody.userID, reqBody.userPW);
+
+                                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                    isCorrect = Convert.ToInt32(cmd.ExecuteScalar());
+                                    Console.WriteLine(isCorrect);
+                                }
+
+                                if (Convert.ToBoolean(isCorrect))
+                                {
+                                    DisplayText(reqBody.userID + " sign in");
+                                    // 온라인 사용자 목록에 추가
+                                    clientList.Add(reqBody.userID, client);
+
+                                    // 로그인 완료 메시지 작성 & 발송
+                                    PacketMessage resMsg = new PacketMessage();
+                                    resMsg.Header = new Header()
+                                    {
+                                        MSGID = msgid++,
+                                        MSGTYPE = CONSTANTS.RES_SIGNIN_SUCCESS,
+                                        BODYLEN = 0,
+                                        FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                        LASTMSG = CONSTANTS.LASTMSG,
+                                        SEQ = 0
+                                    };
+
+                                    SendMessageClient(resMsg, reqBody.userID);
+                                }
+                                else
+                                {
+                                    // 로그인 시도자에게 비밀번호가 맞지 않음 알림
+                                    PacketMessage resMsg = new PacketMessage();
+                                    resMsg.Header = new Header()
+                                    {
+                                        MSGID = msgid++,
+                                        MSGTYPE = CONSTANTS.RES_SIGNIN_FAIL_WRONG_PASSWORD,
+                                        BODYLEN = 0,
+                                        FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                        LASTMSG = CONSTANTS.LASTMSG,
+                                        SEQ = 0
+                                    };
+                                    SendMessageClient(resMsg, client);
+                                }
+                            }
+                            // 로그인 시도자에게 회원이 이미 로그인 중 알림
                             else
                             {
-                                // 로그인 시도자에게 비밀번호가 맞지 않음 알림
                                 PacketMessage resMsg = new PacketMessage();
                                 resMsg.Header = new Header()
                                 {
                                     MSGID = msgid++,
-                                    MSGTYPE = CONSTANTS.RES_SIGNIN_FAIL_WRONG_PASSWORD,
+                                    MSGTYPE = CONSTANTS.RES_SIGNIN_FAIL_ONLINE_USER,
                                     BODYLEN = 0,
                                     FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
                                     LASTMSG = CONSTANTS.LASTMSG,
@@ -898,50 +917,352 @@ namespace TestServer
                                 SendMessageClient(resMsg, client);
                             }
                         }
-                        // 회원이 이미 로그인 중
-                        else
-                        {
-                            PacketMessage resMsg = new PacketMessage();
-                            resMsg.Header = new Header()
-                            {
-                                MSGID = msgid++,
-                                MSGTYPE = CONSTANTS.RES_SIGNIN_FAIL_ONLINE_USER,
-                                BODYLEN = 0,
-                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
-                                LASTMSG = CONSTANTS.LASTMSG,
-                                SEQ = 0
-                            };
-                            SendMessageClient(resMsg, client);
-                        }
+                        break;
                     }
-                    break;
                 // 로그아웃 통보
                 case CONSTANTS.REQ_SIGNOUT:
-                    break;
+                    {
+                        RequestSignOut reqBody = (RequestSignOut)message.Body;
+                        if (clientList.ContainsKey(reqBody.userID))
+                        {
+                            clientList.Remove(reqBody.userID);
+                        }
+                        // 다른 회원에게도 알림 추가할 것
+                        break;
+                    }
                 // 회원목록 요청
                 case CONSTANTS.REQ_USERLIST:
-                    break;
+                    {
+                        string msg = string.Empty;
+                        foreach (string user in userList)
+                        {
+                            msg = msg + user + "&";
+                        }
+
+                        PacketMessage resMsg = new PacketMessage();
+                        resMsg.Body = new ResponseUserList()
+                        {
+                            msg = msg
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_USERLIST,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+                        SendMessageClient(resMsg, client);
+                        break;
+                    }
                 // 채팅방목록 요청
                 case CONSTANTS.REQ_GROUPLIST:
-                    break;
+                    {
+                        RequestGroupList reqBody = (RequestGroupList)message.Body;
+
+                        string msg = string.Empty;
+                        foreach (KeyValuePair<long, Tuple<string, string>> group in groupList)
+                        {
+                            string[] delimiterChars = { ", " };
+                            string[] users = group.Value.Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+                            if (users.Contains(reqBody.userID))
+                            {
+                                msg = msg + group.Key + "^" + group.Value.Item1 + "^" + group.Value.Item2 + "&";
+                            }
+                        }
+
+                        PacketMessage resMsg = new PacketMessage();
+                        resMsg.Body = new ResponseGroupList()
+                        {
+                            msg = msg
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_GROUPLIST,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+                        SendMessageClient(resMsg, reqBody.userID);
+                        break;
+                    }
                 // 채팅방 생성 요청
                 case CONSTANTS.REQ_CREATE_GROUP:
-                    break;
+                    {
+                        RequestCreateGroup reqBody = (RequestCreateGroup)message.Body;
+                        // group 부호화
+                        string encryptedGroup = AESEncrypt256(reqBody.group, "0");
+
+                        // DB에 채팅방 추가
+                        // insert 완료하면 pid 가져와서 저장하기
+
+                        // DB insert
+                        long pid = 0;
+                        using (MySqlConnection conn = new MySqlConnection(connStr))
+                        {
+                            conn.Open();
+                            string sql = string.Format("insert into encryptedroom (roomName, userID) values ('{0}', '{1}')", reqBody.groupName, encryptedGroup);
+
+                            MySqlCommand cmd = new MySqlCommand(sql, conn);
+                            cmd.ExecuteNonQuery();
+                            pid = cmd.LastInsertedId;
+                        }
+
+                        // groupList에 추가
+                        groupList.Add(pid, new Tuple<string, string>(reqBody.groupName, reqBody.group));
+
+                        log.Info(groupList[pid]);
+                        string msg = string.Empty;
+                        msg = pid + "&" + reqBody.groupName + "&" + reqBody.group;
+
+                        PacketMessage resMsg = new PacketMessage();
+                        resMsg.Body = new ResponseCreateGroupSuccess()
+                        {
+                            msg = msg
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_CREATE_GROUP_SUCCESS,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+
+                        // encryptedGroup 복호화
+                        // string usersInGroup = AESDecrypt256(encryptedGroup, "0");
+                        string[] delimiterChars = { ", " };
+                        // string[] users = usersInGroup.Split(delimiterChars);
+                        string[] users = reqBody.group.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+
+                        // 채팅방 인원에게 채팅방 생성 완료 메시지 발송
+                        foreach (string user in users)
+                        {
+                            SendMessageClient(resMsg, user);
+                        }
+                        break;
+                    }
                 // 채팅 메시지 발송 요청
                 case CONSTANTS.REQ_CHAT:
-                    break;
+                    {
+                        RequestChat reqBody = (RequestChat)message.Body;
+
+                        PacketMessage resMsg = new PacketMessage();
+                        resMsg.Body = new ResponseChat()
+                        {
+                            msg = reqBody.msg
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_CHAT,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+
+                        // group에 속한 모든 사용자에게 송출
+                        string[] delimiterChars = { ", " };
+                        List<string> usersInGroup = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+
+                        foreach (string user in usersInGroup)
+                        {
+                            SendMessageClient(resMsg, user);
+                        }
+                        break;
+                    }
                 // 채팅방 초대 요청
                 case CONSTANTS.REQ_INVITATION:
-                    break;
+                    {
+                        RequestInvitation reqBody = (RequestInvitation)message.Body;
+
+                        string[] delimiterChars = { ", " };
+                        List<string> users = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+                        users.AddRange(reqBody.invitedUsers);
+
+                        // sort
+                        users.Sort();
+
+                        // Join
+                        string usersInGroup = string.Join(", ", users);
+
+                        // 부호화
+                        string encryptedGroup = AESEncrypt256(usersInGroup, "0");
+
+                        // DB 변경
+                        using (MySqlConnection conn = new MySqlConnection(connStr))
+                        {
+                            conn.Open();
+                            string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, reqBody.pid);
+
+                            MySqlCommand cmd = new MySqlCommand(sql, conn);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // groupList 변경
+                        groupList[reqBody.pid] = new Tuple<string, string>(groupList[reqBody.pid].Item1, usersInGroup);
+
+                        PacketMessage resMsg = new PacketMessage();
+                        resMsg.Body = new ResponseInvitationSuccess()
+                        {
+                            msg = reqBody.msg
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_INVITATION_SUCCESS,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+
+                        // group에 포함된 인원에게 송출
+                        foreach (string user in users)
+                        {
+                            SendMessageClient(resMsg, user);
+                        }
+                        break;
+                    }
                 // 채팅방 나가기 요청
                 case CONSTANTS.REQ_LEAVE_GROUP:
-                    break;
+                    {
+                        RequestLeaveGroup reqBody = (RequestLeaveGroup)message.Body;
+
+                        // DB 변경
+                        string[] delimiterChars = { ", " };
+                        List<string> users = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+
+                        users.Remove(reqBody.user);
+                        string usersInGroup = string.Join(", ", users);
+                        string encryptedGroup = AESEncrypt256(usersInGroup, "0");
+
+                        using (MySqlConnection conn = new MySqlConnection(connStr))
+                        {
+                            conn.Open();
+                            string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, reqBody.pid);
+
+                            MySqlCommand cmd = new MySqlCommand(sql, conn);
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        // groupList 변경
+                        groupList[reqBody.pid] = new Tuple<string, string>(groupList[reqBody.pid].Item2, usersInGroup);
+
+                        PacketMessage resMsg = new PacketMessage();
+                        resMsg.Body = new ResponseLeaveGroupSuccess()
+                        {
+                            msg = reqBody.pid + "&" + reqBody.user
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_LEAVE_GROUP_SUCCESS,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+
+                        // 나간 사람에게 송출
+                        SendMessageClient(resMsg, reqBody.user);
+
+                        // group에 속한 모든 사용자에게 송출
+                        foreach (string user in users)
+                        {
+                            SendMessageClient(resMsg, user);
+                        }
+
+                        break;
+                    }
+                case CONSTANTS.REQ_SEND_FILE:
+                    {
+                        RequestSendFile reqBody = (RequestSendFile)message.Body;
+
+                        string msg = message.Header.MSGID + "&" + CONSTANTS.ACCEPTED + "&" + reqBody.filePath;
+
+                        PacketMessage resMsg = new PacketMessage();
+                        resMsg.Body = new ResponseSendFile()
+                        {
+                            msg = msg
+                            // MSGID = message.Header.MSGID,
+                            // RESPONSE = CONSTANTS.ACCEPTED,
+                            // filePath = reqBody.filePath
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_SEND_FILE,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+
+                        SendMessageClient(resMsg, reqBody.userID);
+
+                        long fileSize = reqBody.FILESIZE;
+                        string fileName = reqBody.FILENAME;
+
+                        string dir = System.Windows.Forms.Application.StartupPath + "\\file";
+                        if (Directory.Exists(dir) == false)
+                        {
+                            Directory.CreateDirectory(dir);
+                        }
+
+                        // 파일 스트림 생성
+                        FileStream file = new FileStream(dir + "\\" + fileName, FileMode.Create);
+                        uint? dataMsgId = null;
+                        ushort prevSeq = 0;
+                        while ((message = MessageUtil.Receive(clientSocket.GetStream())) != null)
+                        {
+                            Console.Write("#");
+                            if (message.Header.MSGTYPE != CONSTANTS.REQ_SEND_FILE_DATA)
+                                break;
+
+                            if (dataMsgId == null)
+                                dataMsgId = message.Header.MSGID;
+                            else
+                            {
+                                if (dataMsgId != message.Header.MSGID)
+                                    break;
+                            }
+
+                            // 메시지 순서가 어긋나면 전송 중단
+                            if (prevSeq++ != message.Header.SEQ)
+                            {
+                                Console.WriteLine("{0}, {1}", prevSeq, message.Header.SEQ);
+                                break;
+                            }
+
+                            file.Write(message.Body.GetBytes(), 0, message.Body.GetSize());
+
+                            // 분할 메시지가 아니면 반복을 한번만하고 빠져나옴
+                            if (message.Header.FRAGMENTED == CONSTANTS.NOT_FRAGMENTED)
+                                break;
+                            //마지막 메시지면 반복문을 빠져나옴
+                            if (message.Header.LASTMSG == CONSTANTS.LASTMSG)
+                                break;
+                        }
+                        long recvFileSize = file.Length;
+                        file.Close();
+
+                        break;
+                    }
+                case CONSTANTS.REQ_SEND_FILE_DATA:
+                    {
+                        break;
+                    }
                 default:
-                    break;
+                    {
+                        break;
+                    }
             }
         }
     }
 }
-
-// 출처: https://it-jerryfamily.tistory.com/80 [IT 이야기]
-// 출처: https://yeolco.tistory.com/53 [열코의 프로그래밍 일기]

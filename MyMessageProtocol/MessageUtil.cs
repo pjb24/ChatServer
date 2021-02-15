@@ -57,11 +57,20 @@ namespace MyMessageProtocol
                 case CONSTANTS.REQ_REGISTER:
                     body = new RequestRegister(bBuffer);
                     break;
+                case CONSTANTS.RES_REGISTER_SUCCESS:
+                    body = new ResponseRegisterSuccess(bBuffer);
+                    break;
                 case CONSTANTS.REQ_SIGNIN:
                     body = new RequestSignIn(bBuffer);
                     break;
+                case CONSTANTS.REQ_SIGNOUT:
+                    body = new RequestSignOut(bBuffer);
+                    break;
                 case CONSTANTS.RES_USERLIST:
                     body = new ResponseUserList(bBuffer);
+                    break;
+                case CONSTANTS.REQ_GROUPLIST:
+                    body = new RequestGroupList(bBuffer);
                     break;
                 case CONSTANTS.RES_GROUPLIST:
                     body = new ResponseGroupList(bBuffer);
@@ -89,6 +98,18 @@ namespace MyMessageProtocol
                     break;
                 case CONSTANTS.RES_LEAVE_GROUP_SUCCESS:
                     body = new ResponseLeaveGroupSuccess(bBuffer);
+                    break;
+                case CONSTANTS.REQ_SEND_FILE:
+                    body = new RequestSendFile(bBuffer);
+                    break;
+                case CONSTANTS.RES_SEND_FILE:
+                    body = new ResponseSendFile(bBuffer);
+                    break;
+                case CONSTANTS.REQ_SEND_FILE_DATA:
+                    body = new RequestSendFileData(bBuffer);
+                    break;
+                case CONSTANTS.RES_FILE_SEND_COMPLETE:
+                    body = new ResponseFileSendComplete(bBuffer);
                     break;
                 default:
                     // throw new Exception(String.Format("Unknown MSGTYPE: {0}" + header.MSGTYPE));

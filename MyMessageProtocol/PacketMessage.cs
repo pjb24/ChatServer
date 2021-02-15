@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace MyMessageProtocol
 {
@@ -58,9 +59,13 @@ namespace MyMessageProtocol
         public const uint RES_LEAVE_GROUP_SUCCESS = 0X21;
 
         // 파일 전송 준비 요청
+        public const uint REQ_SEND_FILE = 0X22;
         // 파일 전송 준비 완료
+        public const uint RES_SEND_FILE = 0X23;
         // 파일 DATA 전송
+        public const uint REQ_SEND_FILE_DATA = 0X24;
         // 파일 DATA 전송 완료
+        public const uint RES_FILE_SEND_COMPLETE = 0X25;
 
         // 조각화 유무 정의
         public const byte NOT_FRAGMENTED = 0X00;
@@ -95,14 +100,24 @@ namespace MyMessageProtocol
             byte[] bytes = new byte[GetSize()];
 
             Header.GetBytes().CopyTo(bytes, 0);
-            Body.GetBytes().CopyTo(bytes, Header.GetSize());
-
+            if (Body != null)
+            {
+                Body.GetBytes().CopyTo(bytes, Header.GetSize());
+            }
+            
             return bytes;
         }
 
         public int GetSize()
         {
-            return Header.GetSize() + Body.GetSize();
+            if (Body != null)
+            {
+                return Header.GetSize() + Body.GetSize();
+            }
+            else
+            {
+                return Header.GetSize();
+            }
         }
     }
 }
