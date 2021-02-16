@@ -606,7 +606,7 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
+            string[] delimiterChars = { "&^%$#&^%$&^%$" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
 
             pid = long.Parse(temp[0]);
