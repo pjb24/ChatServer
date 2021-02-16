@@ -31,6 +31,9 @@ namespace TestServer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(TestServerUI));
 
+        // 1회 파일 전송 최대 크기
+        const int CHUNK_SIZE = 4096;
+
         TcpListener server = null;
         TcpClient clientSocket = null;
         static int counter = 0;
@@ -187,407 +190,6 @@ namespace TestServer
                 {
                     Console.WriteLine(e.StackTrace);
                 }
-            }
-        }
-
-        // received message 처리
-        private void OnReceived(string message, TcpClient client)
-        {
-            if (message.Contains("register"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("register"));
-
-                string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-                string user_PW = msg.Substring(msg.LastIndexOf("&") + 1);
-                DisplayText(user_ID + "&" + user_PW);
-
-                // 중복 확인
-                if (!userList.Contains(user_ID))
-                {
-                    // 회원 추가
-                    using (MySqlConnection conn = new MySqlConnection(connStr))
-                    {
-                        conn.Open();
-                        string sql = string.Format("insert into users values ('{0}', '{1}')", user_ID, user_PW);
-
-                        MySqlCommand cmd = new MySqlCommand(sql, conn);
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    userList.Add(user_ID);
-                    DisplayText("Register : " + user_ID);
-
-                    string sendMsg = user_ID + " is register";
-                    // clientList에 등록된 사용자가 아니기 때문에 TcpClient 정보를 사용
-                    SendMessageClient(sendMsg, client);
-
-                    // 로그인 중인 사용자에게 새로운 회원이 생겼음을 알림
-                    sendMsg = user_ID + "&responseUserList";
-                    foreach (string user in clientList.Keys)
-                    {
-                        SendMessageClient(sendMsg, user);
-                    }
-                }
-                else
-                {                    
-                    // 이미 있는 사용자
-                    string sendMsg = user_ID + " is aleady registered";
-                    DisplayText(sendMsg);
-                    SendMessageClient(sendMsg, client);
-                }
-            }
-            else if (message.Contains("signin"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("signin"));
-
-                string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-                string user_PW = msg.Substring(msg.LastIndexOf("&") + 1);
-                DisplayText(user_ID + "&" + user_PW);
-
-                // 등록된 회원인지 판정
-                if (!userList.Contains(user_ID))
-                {
-                    // 로그인 시도자에게 등록되지 않은 회원 알림
-                    string sendMsg = user_ID + " is not registered";
-                    DisplayText(sendMsg);
-                    SendMessageClient(sendMsg, client);
-                }
-                else
-                {
-                    // 이미 로그인 중인지 판정
-                    if (!clientList.ContainsKey(user_ID))
-                    {
-                        int isCorrect = 0;
-                        // DB에서 비밀번호 확인 쿼리
-                        using (MySqlConnection conn = new MySqlConnection(connStr))
-                        {
-                            conn.Open();
-                            string sql = string.Format("select count(userID) from users where userID='{0}' and userPW='{1}'", user_ID, user_PW);
-
-                            MySqlCommand cmd = new MySqlCommand(sql, conn);
-                            isCorrect = Convert.ToInt32(cmd.ExecuteScalar());
-                            Console.WriteLine(isCorrect);
-                        }
-
-                        if (Convert.ToBoolean(isCorrect))
-                        {
-                            DisplayText(user_ID + " sign in");
-                            string sendMsg = user_ID + "&allowSignin";
-                            clientList.Add(user_ID, client);
-
-                            SendMessageClient(sendMsg, user_ID);
-                        }
-                        else
-                        {
-                            // 로그인 시도자에게 비밀번호가 맞지 않음 알림
-                            string sendMsg = "incorrect PW";
-                            DisplayText(sendMsg);
-                            SendMessageClient(sendMsg, client);
-                        }
-                    }
-                    // 회원이 이미 로그인 중
-                    else
-                    {
-                        string sendMsg = user_ID + " is already online";
-
-                        SendMessageClient(sendMsg, client);
-                    }
-                }
-            } // 동기화 할 때 발생
-            else if (message.Contains("requestGroupList"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("requestGroupList"));
-                string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-
-                string sendMsg = null;
-                // 요청한 user_ID가 들어있는 groupList를 추출
-                foreach (KeyValuePair<long, Tuple<string, string>> group in groupList)
-                {
-                    string[] delimiterChars = { ", " };
-                    string[] users = group.Value.Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-                    if (users.Contains(user_ID))
-                    {
-                        sendMsg = sendMsg + group.Key + "^" + group.Value.Item1 + "^" + group.Value.Item2 + "&";
-                    }
-                }
-                sendMsg = sendMsg + "responseGroupList";
-
-                SendMessageClient(sendMsg, user_ID);
-                DisplayText(user_ID + " responseGroupList");
-            } // 동기화 할 때 발생
-            else if (message.Contains("requestUserList"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("requestUserList"));
-                string user_ID = msg.Substring(0, msg.LastIndexOf("&"));
-                string sendMsg = null;
-                // 일단 전체 user_ID 정보 전송, 친구 기능을 넣고 싶음
-                foreach (string user in userList)
-                {
-                    if (!user.Equals(user_ID))
-                    {
-                        sendMsg = sendMsg + user + "&";
-                    }
-                }
-                sendMsg = sendMsg + "responseUserList";
-                SendMessageClient(sendMsg, user_ID);
-
-                DisplayText(user_ID);
-            }
-            // 채팅방 생성
-            else if (message.Contains("createGroup"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("&createGroup"));
-
-                // string encryptedGroup = msg.Substring(msg.LastIndexOf("&") + 1);
-                string group = msg.Substring(msg.LastIndexOf("&") + 1);
-
-                string groupName = msg.Substring(0, msg.LastIndexOf("&"));
-
-                // group 부호화
-                string encryptedGroup = AESEncrypt256(group, "0");
-
-                // DB에 채팅방 추가
-                // insert 완료하면 pid 가져와서 저장하기
-
-                // DB insert
-                long pid = 0;
-                using (MySqlConnection conn = new MySqlConnection(connStr))
-                {
-                    conn.Open();
-                    string sql = string.Format("insert into encryptedroom (roomName, userID) values ('{0}', '{1}')", groupName, encryptedGroup);
-
-                    MySqlCommand cmd = new MySqlCommand(sql, conn);
-                    cmd.ExecuteNonQuery();
-                    pid = cmd.LastInsertedId;
-                }
-
-                // groupList에 추가
-                groupList.Add(pid, new Tuple<string, string>(groupName, group));
-
-                log.Info(groupList[pid]);
-                string sendMsg = "&completeCreateGroup";
-
-                // encryptedGroup 복호화
-                // string usersInGroup = AESDecrypt256(encryptedGroup, "0");
-                string[] delimiterChars = { ", " };
-                // string[] users = usersInGroup.Split(delimiterChars);
-                string[] users = group.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-
-                // 채팅방 인원에게 채팅방 생성 완료 메시지 발송
-                foreach (string user in users)
-                {
-                    SendMessageClient(sendMsg, user);
-                }
-            }
-            // groupChat
-            else if (message.Contains("&groupChat"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("&groupChat"));
-
-                string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
-                msg = msg.Substring(0, msg.LastIndexOf("&"));
-
-                long pid = long.Parse(msg.Substring(msg.LastIndexOf("&") + 1));
-                msg = msg.Substring(0, msg.LastIndexOf("&"));
-
-                string chat = msg;
-
-                string sendMsg = chat + "&" + pid + "&" + user_ID + "&groupChat";
-
-                // group에 속한 모든 사용자에게 송출
-                string[] delimiterChars = { ", " };
-                List<string> usersInGroup = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-
-                foreach (string user in usersInGroup)
-                {
-                    SendMessageClient(sendMsg, user);
-                }
-            }
-            // 로그아웃
-            else if (message.Contains("&SignOut"))
-            {
-                DisplayText(message);
-                string msg = message.Substring(0, message.LastIndexOf("&SignOut"));
-
-                string user_ID = msg;
-
-                if (clientList.ContainsKey(user_ID))
-                {
-                    clientList.Remove(user_ID);
-                }
-            }
-            // 채팅방 나가기 - 채팅방 이름도 변경되게 바꾸기
-            else if (message.Contains("&LeaveGroup"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("&LeaveGroup"));
-                string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
-                long pid = long.Parse(msg.Substring(0, msg.LastIndexOf("&")));
-
-                // DB 변경
-                string[] delimiterChars = { ", " };
-                List<string> users = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-
-                users.Remove(user_ID);
-                string usersInGroup = string.Join(", ", users);
-                string encryptedGroup = AESEncrypt256(usersInGroup, "0");
-
-                using (MySqlConnection conn = new MySqlConnection(connStr))
-                {
-                    conn.Open();
-                    string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, pid);
-
-                    MySqlCommand cmd = new MySqlCommand(sql, conn);
-                    cmd.ExecuteNonQuery();
-                }
-
-                // groupList 변경
-                groupList[pid] = new Tuple<string, string>(groupList[pid].Item1, usersInGroup);
-
-                string sendMsg = pid + "&" + user_ID + "&LeaveGroup";
-
-                // 나간 사람에게 송출
-                SendMessageClient(sendMsg, user_ID);
-
-                // group에 속한 모든 사용자에게 송출
-                foreach (string user in users)
-                {
-                    SendMessageClient(sendMsg, user);
-                }
-            }
-            // 채팅방 초대 - 채팅방 이름도 변경되게 바꾸기
-            else if (message.Contains("&Invitation"))
-            {
-                string msg = message.Substring(0, message.LastIndexOf("&Invitation"));
-
-                string user_ID = msg.Substring(msg.LastIndexOf("&") + 1);
-                msg = msg.Substring(0, msg.LastIndexOf("&"));
-
-                string group = msg.Substring(msg.LastIndexOf("&") + 1);
-
-                long pid = long.Parse(msg.Substring(0, msg.LastIndexOf("&")));
-
-                // groupList에서 검색 후 수정
-                string[] delimiterChars = { ", " };
-                List<string> users = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-                string[] invitedUsers = group.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-                users.AddRange(invitedUsers);
-
-                // sort
-                users.Sort();
-
-                // Join
-                string usersInGroup = string.Join(", ", users);
-
-                // 부호화
-                string encryptedGroup = AESEncrypt256(usersInGroup, "0");
-
-                // DB 변경
-                using (MySqlConnection conn = new MySqlConnection(connStr))
-                {
-                    conn.Open();
-                    string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, pid);
-
-                    MySqlCommand cmd = new MySqlCommand(sql, conn);
-                    cmd.ExecuteNonQuery();
-                }
-
-                // groupList 변경
-                groupList[pid] = new Tuple<string, string>(groupList[pid].Item1, usersInGroup);
-
-                // group에 포함된 인원에게 송출
-                foreach (string user in users)
-                {
-                    SendMessageClient(message, user);
-                }
-            }
-            // 파일 전송
-            else if (message.Contains("&requestSendFile"))
-            {
-                Console.WriteLine(message);
-
-                string msg = message.Substring(0, message.LastIndexOf("&requestSendFile"));
-
-                string user_ID = msg.Substring(msg.LastIndexOf("&"));
-
-                msg = msg.Substring(0, msg.LastIndexOf("&"));
-
-                long fileSize = long.Parse(msg.Substring(msg.LastIndexOf("&")));
-
-                string fileName = msg.Substring(0, msg.LastIndexOf("&"));
-
-                string dir = System.Windows.Forms.Application.StartupPath + "\\file";
-                if (Directory.Exists(dir) == false)
-                {
-                    Directory.CreateDirectory(dir);
-                }
-
-                FileStream file = new FileStream(dir + "\\" + fileName, FileMode.Create);
-
-                /*
-                string sendMsg = "&responseSendFile";
-
-                SendMessageClient(sendMsg, user_ID);
-
-                ushort prevSeq = 0;
-                while ((reqMsg = MessageUtil.Receive(stream)) != null)
-                {
-                    Console.Write("#");
-
-                    // 메시지 순서가 어긋나면 전송 중단
-                    if (prevSeq++ != reqMsg.Header.SEQ)
-                    {
-                        Console.WriteLine("{0}, {1}", prevSeq, reqMsg.Header.SEQ);
-                        break;
-                    }
-
-                    file.Write(reqMsg.Body.GetBytes(), 0, reqMsg.Body.GetSize());
-
-                    // 분할 메시지가 아니면 반복을 한번만하고 빠져나옴
-                    if (reqMsg.Header.FRAGMENTED == CONSTANTS.NOT_FRAGMENTED)
-                        break;
-                    //마지막 메시지면 반복문을 빠져나옴
-                    if (reqMsg.Header.LASTMSG == CONSTANTS.LASTMSG)
-                        break;
-                }
-                long recvFileSize = file.Length;
-                file.Close();
-
-                Console.WriteLine();
-                Console.WriteLine("수신 파일 크기 : {0} bytes", recvFileSize);
-
-                Message rstMsg = new Message();
-                rstMsg.Body = new BodyResult()
-                {
-                    MSGID = reqMsg.Header.MSGID,
-                    RESULT = CONSTANTS.SUCCESS
-                };
-                rstMsg.Header = new Header()
-                {
-                    MSGID = msgid++,
-                    MSGTYPE = CONSTANTS.FILE_SEND_RES,
-                    BODYLEN = (uint)rstMsg.Body.GetSize(),
-                    FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
-                    LASTMSG = CONSTANTS.LASTMSG,
-                    SEQ = 0
-                };
-
-                if (fileSize == recvFileSize)
-                    // 파일 전송 요청에 담겨온 파일 크기와 실제로 받은 파일 크기를 비교
-                    // 같으면 성공 메지시를 보냄
-                    MessageUtil.Send(stream, rstMsg);
-                else
-                {
-                    rstMsg.Body = new BodyResult()
-                    {
-                        MSGID = reqMsg.Header.MSGID,
-                        RESULT = CONSTANTS.FAIL
-                    };
-
-                    // 파일 크기에 이상이 있다면 실패 메시지를 보냄
-                    MessageUtil.Send(stream, rstMsg);
-                }
-                Console.WriteLine("파일 전송을 마쳤습니다.");
-                */
             }
         }
 
@@ -760,10 +362,12 @@ namespace TestServer
             return Output;
         }
 
+
         private void OnReceived(PacketMessage message, TcpClient client)
         {
-            switch(message.Header.MSGTYPE)
+            switch (message.Header.MSGTYPE)
             {
+                
                 // 회원가입 요청
                 case CONSTANTS.REQ_REGISTER:
                     {
@@ -862,7 +466,6 @@ namespace TestServer
 
                                     MySqlCommand cmd = new MySqlCommand(sql, conn);
                                     isCorrect = Convert.ToInt32(cmd.ExecuteScalar());
-                                    Console.WriteLine(isCorrect);
                                 }
 
                                 if (Convert.ToBoolean(isCorrect))
@@ -1180,11 +783,12 @@ namespace TestServer
 
                         break;
                     }
+                // 파일 전송 준비 요청
                 case CONSTANTS.REQ_SEND_FILE:
                     {
                         RequestSendFile reqBody = (RequestSendFile)message.Body;
 
-                        string msg = message.Header.MSGID + "&" + CONSTANTS.ACCEPTED + "&" + reqBody.filePath;
+                        string msg = message.Header.MSGID + "&" + CONSTANTS.ACCEPTED + "&" + reqBody.pid + "&" + reqBody.filePath;
 
                         PacketMessage resMsg = new PacketMessage();
                         resMsg.Body = new ResponseSendFile()
@@ -1219,7 +823,7 @@ namespace TestServer
                         FileStream file = new FileStream(dir + "\\" + fileName, FileMode.Create);
                         uint? dataMsgId = null;
                         ushort prevSeq = 0;
-                        while ((message = MessageUtil.Receive(clientSocket.GetStream())) != null)
+                        while ((message = MessageUtil.Receive(client.GetStream())) != null)
                         {
                             Console.Write("#");
                             if (message.Header.MSGTYPE != CONSTANTS.REQ_SEND_FILE_DATA)
@@ -1252,10 +856,179 @@ namespace TestServer
                         long recvFileSize = file.Length;
                         file.Close();
 
+                        resMsg.Body = new ResponseFileSendComplete()
+                        {
+                            MSGID = message.Header.MSGID,
+                            RESULT = CONSTANTS.SUCCESS
+                        };
+                        resMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.RES_FILE_SEND_COMPLETE,
+                            BODYLEN = (uint)resMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+                        SendMessageClient(resMsg, reqBody.userID);
+
+                        
+                        string filePath = dir + "\\" + fileName;
+
+                        PacketMessage reqMsg = new PacketMessage();
+                        reqMsg.Body = new RequestSendFile()
+                        {
+                            msg = reqBody.pid + "&" + reqBody.userID + "&" + fileSize + "&" + fileName + "&" + filePath
+                        };
+                        reqMsg.Header = new Header()
+                        {
+                            MSGID = msgid++,
+                            MSGTYPE = CONSTANTS.REQ_SEND_FILE,
+                            BODYLEN = (uint)reqMsg.Body.GetSize(),
+                            FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                            LASTMSG = CONSTANTS.LASTMSG,
+                            SEQ = 0
+                        };
+
+                        string[] delimiterChars = { ", " };
+                        List<string> users = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+
+                        foreach (string user in users)
+                        {
+                            SendMessageClient(reqMsg, user);
+                        }
+                        
+                        break;
+                    }
+                case CONSTANTS.RES_SEND_FILE:
+                    {
+                        ResponseSendFile resBody = (ResponseSendFile)message.Body;
+
+                        using (Stream fileStream = new FileStream(resBody.filePath, FileMode.Open))
+                        {
+                            byte[] rbytes = new byte[CHUNK_SIZE];
+
+                            long readValue = BitConverter.ToInt64(rbytes, 0);
+
+                            int totalRead = 0;
+                            ushort msgSeq = 0;
+                            byte fragmented = (fileStream.Length < CHUNK_SIZE) ? CONSTANTS.NOT_FRAGMENTED : CONSTANTS.FRAGMENT;
+
+                            while (totalRead < fileStream.Length)
+                            {
+                                int read = fileStream.Read(rbytes, 0, CHUNK_SIZE);
+                                totalRead += read;
+                                PacketMessage fileMsg = new PacketMessage();
+
+                                byte[] sendBytes = new byte[read];
+                                Array.Copy(rbytes, 0, sendBytes, 0, read);
+
+                                fileMsg.Body = new RequestSendFileData(sendBytes);
+                                fileMsg.Header = new Header()
+                                {
+                                    MSGID = msgid,
+                                    MSGTYPE = CONSTANTS.REQ_SEND_FILE_DATA,
+                                    BODYLEN = (uint)fileMsg.Body.GetSize(),
+                                    FRAGMENTED = fragmented,
+                                    LASTMSG = (totalRead < fileStream.Length) ? CONSTANTS.NOT_LASTMSG : CONSTANTS.LASTMSG,
+                                    SEQ = msgSeq++
+                                };
+
+                                // 모든 파일의 내용이 전송될 때까지 파일 스트림을 0x03 메시지에 담아 클라이언트로 보냄
+
+                                string[] delimiterChars = { ", " };
+                                List<string> users = new List<string>(groupList[resBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+
+                                foreach (string user in users)
+                                {
+                                    SendMessageClient(fileMsg, user);
+                                }
+                            }
+                        }
                         break;
                     }
                 case CONSTANTS.REQ_SEND_FILE_DATA:
                     {
+                        break;
+                    }
+                case CONSTANTS.RES_FILE_SEND_COMPLETE:
+                    {
+                        // 서버에서 파일을 제대로 받았는지에 대한 응답을 받음
+                        ResponseFileSendComplete resBody = (ResponseFileSendComplete)message.Body;
+                        Console.WriteLine("파일 전송 성공");
+                        break;
+                    }
+                case CONSTANTS.SEND_FILE:
+                    {
+                        SendFile reqBody = (SendFile)message.Body;
+
+                        long fileSize = reqBody.FILESIZE;
+                        string fileName = reqBody.FILENAME;
+
+                        long pid = reqBody.pid;
+                        string userID = reqBody.userID;
+                        byte[] DATA = reqBody.DATA;
+
+                        string dir = System.Windows.Forms.Application.StartupPath + "\\file";
+                        if (Directory.Exists(dir) == false)
+                        {
+                            Directory.CreateDirectory(dir);
+                        }
+
+                        // 파일 스트림 생성
+                        FileStream file = new FileStream(dir + "\\" + fileName, FileMode.Append);
+
+                        Console.Write("#");
+
+                        file.Write(reqBody.DATA, 0, reqBody.DATA.Length);
+                        file.Close();
+                        
+                        if (message.Header.LASTMSG == CONSTANTS.LASTMSG)
+                        {
+                            using (Stream fileStream = new FileStream(dir + "\\" + fileName, FileMode.Open))
+                            {
+                                byte[] rbytes = new byte[CHUNK_SIZE];
+
+                                long readValue = BitConverter.ToInt64(rbytes, 0);
+
+                                int totalRead = 0;
+                                ushort msgSeq = 0;
+                                byte fragmented = (fileStream.Length < CHUNK_SIZE) ? CONSTANTS.NOT_FRAGMENTED : CONSTANTS.FRAGMENT;
+
+                                while (totalRead < fileStream.Length)
+                                {
+                                    int read = fileStream.Read(rbytes, 0, CHUNK_SIZE);
+                                    totalRead += read;
+                                    PacketMessage fileMsg = new PacketMessage();
+
+                                    byte[] sendBytes = new byte[read];
+                                    Array.Copy(rbytes, 0, sendBytes, 0, read);
+
+                                    fileMsg.Body = new SendFile()
+                                    {
+                                        msg = pid + "&" + userID + "&" + fileName + "&" + fileSize + "&" + Encoding.Unicode.GetString(sendBytes)
+                                    };
+                                    fileMsg.Header = new Header()
+                                    {
+                                        MSGID = msgid,
+                                        MSGTYPE = CONSTANTS.SEND_FILE,
+                                        BODYLEN = (uint)fileMsg.Body.GetSize(),
+                                        FRAGMENTED = fragmented,
+                                        LASTMSG = (totalRead < fileStream.Length) ? CONSTANTS.NOT_LASTMSG : CONSTANTS.LASTMSG,
+                                        SEQ = msgSeq++
+                                    };
+
+                                    string[] delimiterChars = { ", " };
+                                    List<string> users = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+
+                                    foreach (string user in users)
+                                    {
+                                        SendMessageClient(fileMsg, user);
+                                    }
+                                }
+                            }
+                        }
+
                         break;
                     }
                 default:

@@ -67,6 +67,9 @@ namespace MyMessageProtocol
         // 파일 DATA 전송 완료
         public const uint RES_FILE_SEND_COMPLETE = 0X25;
 
+        // 파일 전송
+        public const uint SEND_FILE = 0X26;
+
         // 조각화 유무 정의
         public const byte NOT_FRAGMENTED = 0X00;
         public const byte FRAGMENT = 0X01;

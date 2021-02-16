@@ -511,6 +511,7 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public uint MSGID = 0;
         public byte RESPONSE = 0;
+        public long pid = 0;
         public string filePath = string.Empty;
         public ResponseSendFile() { }
         public ResponseSendFile(byte[] bytes)
@@ -521,7 +522,8 @@ namespace MyMessageProtocol
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             MSGID = uint.Parse(temp[0]);
             RESPONSE = Encoding.Unicode.GetBytes(temp[1])[0];
-            filePath = temp[2];
+            pid = long.Parse(temp[2]);
+            filePath = temp[3];
         }
 
         public byte[] GetBytes()
@@ -587,6 +589,44 @@ namespace MyMessageProtocol
         public int GetSize()
         {
             return sizeof(uint) + sizeof(byte);
+        }
+    }
+
+    public class SendFile : ISerializable
+    {
+        public string msg = string.Empty;
+        public long pid = 0;
+        public string userID = string.Empty;
+        public string FILENAME = string.Empty;
+        public long FILESIZE = 0;
+        public byte[] DATA;
+
+        public SendFile() { }
+        public SendFile(byte[] bytes)
+        {
+            msg = Encoding.Unicode.GetString(bytes);
+
+            string[] delimiterChars = { "&" };
+            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+
+            pid = long.Parse(temp[0]);
+            userID = temp[1];
+            FILENAME = temp[2];
+            FILESIZE = long.Parse(temp[3]);
+            DATA = Encoding.Unicode.GetBytes(temp[4]);
+        }
+
+        public byte[] GetBytes()
+        {
+            byte[] bytes = new byte[GetSize()];
+            bytes = Encoding.Unicode.GetBytes(msg);
+
+            return bytes;
+        }
+
+        public int GetSize()
+        {
+            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 }

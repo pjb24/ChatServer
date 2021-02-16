@@ -111,6 +111,9 @@ namespace MyMessageProtocol
                 case CONSTANTS.RES_FILE_SEND_COMPLETE:
                     body = new ResponseFileSendComplete(bBuffer);
                     break;
+                case CONSTANTS.SEND_FILE:
+                    body = new SendFile(bBuffer);
+                    break;
                 default:
                     // throw new Exception(String.Format("Unknown MSGTYPE: {0}" + header.MSGTYPE));
                     break;
