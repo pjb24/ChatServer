@@ -37,6 +37,9 @@ namespace TestServer
         public delegate void DisconnectedHandler(TcpClient clientSocket);
         public event DisconnectedHandler OnDisconnected;
 
+        // public static bool OpeningFile = false;
+        public static AutoResetEvent autoEvent = new AutoResetEvent(true);
+
         private void doChat()
         {
             // 함수 내에서 사용할 변수 선언
@@ -61,6 +64,11 @@ namespace TestServer
                     */
 
                     PacketMessage message = MessageUtil.Receive(stream);
+
+                    if (message.Header.MSGTYPE == CONSTANTS.RES_SEND_FILE)
+                    {
+                        autoEvent.WaitOne();
+                    }
 
                     // OnReceived 이벤트 발생, MessageDisplayHandler delegate에 msg와 clientSocket 전달, OnReceived에서 메시지 처리
                     if (OnReceived != null)

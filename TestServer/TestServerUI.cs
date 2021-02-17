@@ -790,7 +790,7 @@ namespace TestServer
                         {
                             RequestSendFile reqBody = (RequestSendFile)message.Body;
 
-                            string msg = message.Header.MSGID + "&" + CONSTANTS.ACCEPTED + "&" + reqBody.pid + "&" + reqBody.filePath;
+                            string msg = message.Header.MSGID + "&" + CONSTANTS.ACCEPTED + "&" + reqBody.pid + "&" + reqBody.filePath + "&" + reqBody.userID;
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseSendFile()
@@ -892,6 +892,7 @@ namespace TestServer
                                 SEQ = 0
                             };
 
+                            // 채팅방에 포함된 회원들에게 파일 수신 요청
                             string[] delimiterChars = { ", " };
                             List<string> users = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
 
@@ -905,8 +906,6 @@ namespace TestServer
                     case CONSTANTS.RES_SEND_FILE:
                         {
                             ResponseSendFile resBody = (ResponseSendFile)message.Body;
-
-                            
 
                             using (Stream fileStream = new FileStream(resBody.filePath, FileMode.Open))
                             {
@@ -939,16 +938,10 @@ namespace TestServer
                                     };
 
                                     // 모든 파일의 내용이 전송될 때까지 파일 스트림을 0x03 메시지에 담아 클라이언트로 보냄
-
-                                    string[] delimiterChars = { ", " };
-                                    List<string> users = new List<string>(groupList[resBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-
-                                    foreach (string user in users)
-                                    {
-                                        SendMessageClient(fileMsg, user);
-                                    }
+                                    SendMessageClient(fileMsg, resBody.userID);
                                 }
                             }
+                            handleClient.autoEvent.Set();
                             break;
                         }
                     case CONSTANTS.REQ_SEND_FILE_DATA:

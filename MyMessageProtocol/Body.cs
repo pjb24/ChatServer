@@ -513,6 +513,8 @@ namespace MyMessageProtocol
         public byte RESPONSE = 0;
         public long pid = 0;
         public string filePath = string.Empty;
+        public string userID = string.Empty;
+
         public ResponseSendFile() { }
         public ResponseSendFile(byte[] bytes)
         {
@@ -524,6 +526,7 @@ namespace MyMessageProtocol
             RESPONSE = Encoding.Unicode.GetBytes(temp[1])[0];
             pid = long.Parse(temp[2]);
             filePath = temp[3];
+            userID = temp[4];
         }
 
         public byte[] GetBytes()
