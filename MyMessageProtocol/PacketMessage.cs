@@ -11,18 +11,18 @@ namespace MyMessageProtocol
         public const uint REQ_REGISTER = 0X01;
         // 회원가입 성공
         public const uint RES_REGISTER_SUCCESS = 0X02;
-        // 회원가입 실패 - 이미 존재하는 사용자
+        // 회원가입 실패 - 이미 등록된 사용자
         public const uint RES_REGISTER_FAIL_EXIST = 0X03;
 
         // 로그인 요청
         public const uint REQ_SIGNIN = 0X04;
         // 로그인 성공
         public const uint RES_SIGNIN_SUCCESS = 0X05;
-        // 로그인 실패 - 존재하지 않는 사용자
+        // 로그인 실패 - 등록되지 않은 사용자
         public const uint RES_SIGNIN_FAIL_NOT_EXIST = 0X06;
         // 로그인 실패 - 잘못된 비밀번호
         public const uint RES_SIGNIN_FAIL_WRONG_PASSWORD = 0X07;
-        // 로그인 실패 - 이미 접속 중인 사용자
+        // 로그인 실패 - 접속 중인 사용자
         public const uint RES_SIGNIN_FAIL_ONLINE_USER = 0X08;
 
         // 로그아웃 통보
@@ -33,9 +33,9 @@ namespace MyMessageProtocol
         // 회원목록 반환
         public const uint RES_USERLIST = 0X11;
 
-        // 채팅방목록 요청
+        // 채팅방 목록 요청
         public const uint REQ_GROUPLIST = 0X12;
-        // 채팅방목록 반환
+        // 채팅방 목록 반환
         public const uint RES_GROUPLIST = 0X13;
 
         // 채팅방 생성 요청

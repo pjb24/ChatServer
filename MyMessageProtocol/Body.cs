@@ -243,7 +243,7 @@ namespace MyMessageProtocol
         public long pid = 0;
         public string roomName = string.Empty;
         public string users = string.Empty;
-
+        
         public ResponseCreateGroupSuccess() { }
         public ResponseCreateGroupSuccess(byte[] bytes)
         {
@@ -510,7 +510,6 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public uint MSGID = 0;
-        public byte RESPONSE = 0;
         public long pid = 0;
         public string filePath = string.Empty;
         public string userID = string.Empty;
@@ -523,10 +522,9 @@ namespace MyMessageProtocol
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             MSGID = uint.Parse(temp[0]);
-            RESPONSE = Encoding.Unicode.GetBytes(temp[1])[0];
-            pid = long.Parse(temp[2]);
-            filePath = temp[3];
-            userID = temp[4];
+            pid = long.Parse(temp[1]);
+            filePath = temp[2];
+            userID = temp[3];
         }
 
         public byte[] GetBytes()

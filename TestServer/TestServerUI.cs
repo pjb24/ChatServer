@@ -814,7 +814,7 @@ namespace TestServer
                         {
                             RequestSendFile reqBody = (RequestSendFile)message.Body;
 
-                            string msg = message.Header.MSGID + "&" + CONSTANTS.ACCEPTED + "&" + reqBody.pid + "&" + reqBody.filePath + "&" + reqBody.userID;
+                            string msg = message.Header.MSGID + "&" + reqBody.pid + "&" + reqBody.filePath + "&" + reqBody.userID;
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseSendFile()
