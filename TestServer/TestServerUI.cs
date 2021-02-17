@@ -699,18 +699,30 @@ namespace TestServer
                             // 부호화
                             string encryptedGroup = AESEncrypt256(usersInGroup, "0");
 
+                            // 채팅방 이름
+                            string roomName = string.Empty;
+                            if (usersInGroup.Length > 20)
+                            {
+                                roomName = usersInGroup.Substring(0, 20);
+                            }
+                            else
+                            {
+                                roomName = usersInGroup;
+                            }
+                            
+
                             // DB 변경
                             using (MySqlConnection conn = new MySqlConnection(connStr))
                             {
                                 conn.Open();
-                                string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, reqBody.pid);
+                                string sql = string.Format("update encryptedroom set userID='{0}', roomName='{1}' where pid={2}", encryptedGroup, roomName , reqBody.pid);
 
                                 MySqlCommand cmd = new MySqlCommand(sql, conn);
                                 cmd.ExecuteNonQuery();
                             }
 
                             // groupList 변경
-                            groupList[reqBody.pid] = new Tuple<string, string>(groupList[reqBody.pid].Item1, usersInGroup);
+                            groupList[reqBody.pid] = new Tuple<string, string>(roomName, usersInGroup);
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseInvitationSuccess()
@@ -745,19 +757,31 @@ namespace TestServer
 
                             users.Remove(reqBody.user);
                             string usersInGroup = string.Join(", ", users);
+
+                            // 채팅방 이름
+                            string roomName = string.Empty;
+                            if (usersInGroup.Length > 20)
+                            {
+                                roomName = usersInGroup.Substring(0, 20);
+                            }
+                            else
+                            {
+                                roomName = usersInGroup;
+                            }
+
                             string encryptedGroup = AESEncrypt256(usersInGroup, "0");
 
                             using (MySqlConnection conn = new MySqlConnection(connStr))
                             {
                                 conn.Open();
-                                string sql = string.Format("update encryptedroom set userID='{0}' where pid={1}", encryptedGroup, reqBody.pid);
+                                string sql = string.Format("update encryptedroom set userID='{0}', roomName='{1}' where pid={2}", encryptedGroup, roomName , reqBody.pid);
 
                                 MySqlCommand cmd = new MySqlCommand(sql, conn);
                                 cmd.ExecuteNonQuery();
                             }
 
                             // groupList 변경
-                            groupList[reqBody.pid] = new Tuple<string, string>(groupList[reqBody.pid].Item2, usersInGroup);
+                            groupList[reqBody.pid] = new Tuple<string, string>(roomName, usersInGroup);
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseLeaveGroupSuccess()
