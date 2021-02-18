@@ -743,14 +743,10 @@ namespace TestServer
                             string encryptedGroup = AESEncrypt256(usersInGroup, "0");
 
                             // 채팅방 이름
-                            string roomName = string.Empty;
-                            if (usersInGroup.Length > 20)
+                            string roomName = usersInGroup + " Group";
+                            if (roomName.Length > 20)
                             {
-                                roomName = usersInGroup.Substring(0, 20);
-                            }
-                            else
-                            {
-                                roomName = usersInGroup;
+                                roomName = roomName.Substring(0, 20);
                             }
                             
 
@@ -805,14 +801,10 @@ namespace TestServer
                             string usersInGroup = string.Join(", ", users);
 
                             // 채팅방 이름
-                            string roomName = string.Empty;
+                            string roomName = usersInGroup + " Group";
                             if (usersInGroup.Length > 20)
                             {
                                 roomName = usersInGroup.Substring(0, 20);
-                            }
-                            else
-                            {
-                                roomName = usersInGroup;
                             }
 
                             string encryptedGroup = AESEncrypt256(usersInGroup, "0");
