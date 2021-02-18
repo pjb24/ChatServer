@@ -76,9 +76,32 @@ namespace TestServer
             using (MySqlConnection conn = new MySqlConnection(connStr))
             {
                 conn.Open();
-                string sql = "select userID from users";
 
+                string sql = "select count(table_rows) from information_schema.tables where table_name = 'users'";
+                
                 MySqlCommand cmd = new MySqlCommand(sql, conn);
+                int countTable = Convert.ToInt32(cmd.ExecuteScalar());
+                if (countTable == 1)
+                {
+                    sql = "create table users(userID varchar(20) not null primary key, userPW char(64) not null)";
+                    cmd.CommandText = sql;
+                    cmd.ExecuteNonQuery();
+                }
+
+
+                sql = "select count(table_rows) from information_schema.tables where table_name = 'encryptedroom'";
+                cmd.CommandText = sql;
+                countTable = Convert.ToInt32(cmd.ExecuteScalar());
+                if (countTable != 1)
+                {
+                    sql = "create table encryptedroom(pid int(11) not null auto_increment primary key, roomName varchar(20) not null, userID char(64) not null)";
+                    cmd.CommandText = sql;
+                    cmd.ExecuteNonQuery();
+                }
+
+                sql = "select userID from users";
+
+                cmd.CommandText = sql;
                 MySqlDataReader reader = cmd.ExecuteReader();
                 // log.Info("mariaDB connected");
                 while (reader.Read())
