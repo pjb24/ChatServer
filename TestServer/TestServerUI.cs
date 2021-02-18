@@ -429,6 +429,9 @@ namespace TestServer
                                     LASTMSG = CONSTANTS.LASTMSG,
                                     SEQ = 0
                                 };
+                                // 회원가입 성공 로그 기록
+                                log.Info(string.Format("{0}님이 회원가입", reqBody.userID));
+
                                 // 회원가입 요청자에게 발송
                                 SendMessageClient(resMsg, client);
 
@@ -495,6 +498,9 @@ namespace TestServer
 
                                     if (Convert.ToBoolean(isCorrect))
                                     {
+                                        // 로그인 성공 로그 기록
+                                        log.Info(string.Format("{0}님이 로그인", reqBody.userID));
+
                                         DisplayText(reqBody.userID + " sign in");
                                         // 온라인 사용자 목록에 추가
                                         clientList.Add(reqBody.userID, client);
@@ -516,6 +522,10 @@ namespace TestServer
                                     else
                                     {
                                         // 로그인 시도자에게 비밀번호가 맞지 않음 알림
+
+                                        // 잘못된 비밀번호 로그인 시도 로그 기록
+                                        log.Info(string.Format("{0}님에게 잘못된 비밀번호로 로그인 시도", reqBody.userID));
+
                                         PacketMessage resMsg = new PacketMessage();
                                         resMsg.Header = new Header()
                                         {
@@ -532,6 +542,9 @@ namespace TestServer
                                 // 로그인 시도자에게 회원이 이미 로그인 중 알림
                                 else
                                 {
+                                    // 접속 중 사용자 로그인 시도 로그 기록
+                                    log.Info(string.Format("접속 중인 {0}님에 로그인 시도", reqBody.userID));
+
                                     PacketMessage resMsg = new PacketMessage();
                                     resMsg.Header = new Header()
                                     {
@@ -555,6 +568,10 @@ namespace TestServer
                             {
                                 clientList.Remove(reqBody.userID);
                             }
+
+                            // 로그아웃 로그 기록
+                            log.Info(string.Format("{0}님이 로그아웃", reqBody.userID));
+
                             // 다른 회원에게도 알림 추가할 것
                             break;
                         }
@@ -645,6 +662,9 @@ namespace TestServer
                             log.Info(groupList[pid]);
                             string msg = string.Empty;
                             msg = pid + "&" + reqBody.groupName + "&" + reqBody.group;
+
+                            // 채팅방 생성 로그 기록
+                            log.Info(string.Format("{0} 채팅방 생성 {1}번 회원 : {2}", reqBody.groupName, pid, reqBody.group));
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseCreateGroupSuccess()
@@ -747,6 +767,9 @@ namespace TestServer
                             // groupList 변경
                             groupList[reqBody.pid] = new Tuple<string, string>(roomName, usersInGroup);
 
+                            // 채팅방 초대 로그 기록
+                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에 초대됨", usersInGroup, reqBody.pid, roomName));
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseInvitationSuccess()
                             {
@@ -805,6 +828,9 @@ namespace TestServer
 
                             // groupList 변경
                             groupList[reqBody.pid] = new Tuple<string, string>(roomName, usersInGroup);
+
+                            // 채팅방 초대 로그 기록
+                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 나감", reqBody.user, reqBody.pid, roomName));
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseLeaveGroupSuccess()
