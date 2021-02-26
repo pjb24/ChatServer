@@ -38,12 +38,14 @@ namespace TestServer
         TcpClient clientSocket = null;
         static int counter = 0;
 
-        // <ID, Socket>
+        // <userID, Socket>
         Dictionary<string, TcpClient> clientList = new Dictionary<string, TcpClient>();
-        // <ID, PW> -> ID 정보만 가지고 PW 정보는 DB에만 저장하게 변경
-        List<string> userList = new List<string>();
-        // <groupname, <ID>>
-        Dictionary<long, Tuple<string, string>> groupList = new Dictionary<long, Tuple<string, string>>();
+        // <userNo, userID>
+        Dictionary<int, string> userList = new Dictionary<int, string>();
+        // <roomNo, <accessRight, roomName>>
+        Dictionary<int, Tuple<int, string>> roomList = new Dictionary<int, Tuple<int, string>>();
+        // <No, <roomNo, userNo, managerRight>>
+        Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
 
         uint msgid = 0;
 
@@ -77,36 +79,49 @@ namespace TestServer
             {
                 conn.Open();
 
-                string sql = "select count(table_rows) from information_schema.tables where table_name = 'users'";
-                
+
+                // DB에 userList - 회원 목록 테이블이 없으면 생성
+                string sql = "select count(table_rows) from information_schema.tables where table_name = 'userList'";
                 MySqlCommand cmd = new MySqlCommand(sql, conn);
                 int countTable = Convert.ToInt32(cmd.ExecuteScalar());
-                if (countTable == 1)
+                if (countTable != 1)
                 {
-                    sql = "create table users(userID varchar(20) not null primary key, userPW char(64) not null)";
+                    sql = "create table userList(No int not null auto_increment primary key, userID varchar(20) not null primary key, userPW varchar(20) not null)";
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                 }
 
-
-                sql = "select count(table_rows) from information_schema.tables where table_name = 'encryptedroom'";
+                // DB에 usersInRoom - 채팅방에 속한 회원 테이블이 없으면 생성
+                sql = "select count(table_rows) from information_schema.tables where table_name = 'usersInRoom'";
                 cmd.CommandText = sql;
                 countTable = Convert.ToInt32(cmd.ExecuteScalar());
                 if (countTable != 1)
                 {
-                    sql = "create table encryptedroom(pid int(11) not null auto_increment primary key, roomName varchar(20) not null, userID char(64) not null)";
+                    sql = "create table usersInRoom(No int not null auto_increment primary key, roomNo int not null, userNo int not null)";
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                 }
 
-                sql = "select userID from users";
+                // DB에 roomList - 채팅방 목록 테이블이 없으면 생성
+                sql = "select count(table_rows) from information_schema.tables where table_name = 'roomList'";
+                cmd.CommandText = sql;
+                countTable = Convert.ToInt32(cmd.ExecuteScalar());
+                if (countTable != 1)
+                {
+                    sql = "create table roomList(No int not null auto_increment primary key, accessRight tinyint not null, roomName varchar(20) not null)";
+                    cmd.CommandText = sql;
+                    cmd.ExecuteNonQuery();
+                }
+
+                // 회원 목록 가져오기
+                sql = "select No, userID from userList";
 
                 cmd.CommandText = sql;
                 MySqlDataReader reader = cmd.ExecuteReader();
                 // log.Info("mariaDB connected");
                 while (reader.Read())
                 {
-                    userList.Add(reader["userID"].ToString());
+                    userList.Add((int)reader["No"], reader["userID"].ToString());
                 }
                 /* 동작 확인용
                 foreach(string user in userList)
@@ -115,20 +130,35 @@ namespace TestServer
                 } */
                 reader.Close();
 
-                sql = "select * from encryptedroom";
+                // 채팅방 목록 가져오기
+                sql = "select * from roomList";
                 cmd.CommandText = sql;
 
                 reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
-                    // userID 복호화
-                    string usersInGroup = AESDecrypt256(reader["userID"].ToString(), "0");
-                    groupList.Add(long.Parse(reader["pid"].ToString()), new Tuple<string, string>(reader["roomName"].ToString(), usersInGroup));
+                    roomList.Add((int)reader["No"], new Tuple<int, string>((int)reader["accessRight"], reader["roomName"].ToString()));
                 }
                 // 동작 확인용
-                foreach (KeyValuePair<long, Tuple<string, string>> temp in groupList)
+                foreach (KeyValuePair<int, Tuple<int, string>> temp in roomList)
                 {
-                    Console.WriteLine("pid : " + temp.Key + " roomName : " + temp.Value.Item1 + " users : " + temp.Value.Item2);
+                    Console.WriteLine("No : " + temp.Key + " accessRight : " + temp.Value.Item1 + " roomName : " + temp.Value.Item2);
+                }
+                reader.Close();
+
+                // 채팅방 속한 회원 목록 가져오기
+                sql = "select * from usersInRoom";
+                cmd.CommandText = sql;
+
+                reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    usersInRoom.Add((int)reader["No"], new Tuple<int, int, int>((int)reader["roomNo"], (int)reader["userNo"], (int)reader["managerRight"]));
+                }
+                // 동작 확인용
+                foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                {
+                    Console.WriteLine("No : " + temp.Key + " roomNo : " + temp.Value.Item1 + " userNo : " + temp.Value.Item2 + " managerRight : " + temp.Value.Item3);
                 }
                 reader.Close();
             }
@@ -398,27 +428,29 @@ namespace TestServer
                         {
                             RequestRegister reqBody = (RequestRegister)message.Body;
 
+                            int No = 0;
                             // 중복 확인
-                            if (!userList.Contains(reqBody.userID))
+                            if (!userList.ContainsValue(reqBody.userID))
                             {
                                 // 회원 추가
                                 using (MySqlConnection conn = new MySqlConnection(connStr))
                                 {
                                     conn.Open();
-                                    string sql = string.Format("insert into users values ('{0}', '{1}')", reqBody.userID, reqBody.userPW);
+                                    string sql = string.Format("insert into userList values ('{0}', '{1}')", reqBody.userID, reqBody.userPW);
 
                                     MySqlCommand cmd = new MySqlCommand(sql, conn);
                                     cmd.ExecuteNonQuery();
+                                    No = (int)cmd.LastInsertedId;
                                 }
 
-                                userList.Add(reqBody.userID);
+                                userList.Add(No, reqBody.userID);
                                 DisplayText("Register : " + reqBody.userID);
 
                                 // 회원가입 성공 메시지 작성
                                 PacketMessage resMsg = new PacketMessage();
                                 resMsg.Body = new ResponseRegisterSuccess()
                                 {
-                                    userID = reqBody.userID
+                                    msg = No + "&" + reqBody.userID
                                 };
                                 resMsg.Header = new Header()
                                 {
@@ -465,7 +497,7 @@ namespace TestServer
                             RequestSignIn reqBody = (RequestSignIn)message.Body;
 
                             // 등록된 회원인지 판정
-                            if (!userList.Contains(reqBody.userID))
+                            if (!userList.ContainsValue(reqBody.userID))
                             {
                                 // 로그인 시도자에게 등록되지 않은 회원 알림
                                 PacketMessage resMsg = new PacketMessage();
@@ -579,9 +611,9 @@ namespace TestServer
                     case CONSTANTS.REQ_USERLIST:
                         {
                             string msg = string.Empty;
-                            foreach (string user in userList)
+                            foreach (KeyValuePair<int, string> temp in userList)
                             {
-                                msg = msg + user + "&";
+                                msg = msg + temp.Key + "^" + temp.Value + "&";
                             }
 
                             PacketMessage resMsg = new PacketMessage();
@@ -602,30 +634,39 @@ namespace TestServer
                             break;
                         }
                     // 채팅방목록 요청
-                    case CONSTANTS.REQ_GROUPLIST:
+                    case CONSTANTS.REQ_ROOMLIST:
                         {
-                            RequestGroupList reqBody = (RequestGroupList)message.Body;
+                            RequestRoomList reqBody = (RequestRoomList)message.Body;
 
                             string msg = string.Empty;
-                            foreach (KeyValuePair<long, Tuple<string, string>> group in groupList)
+                            // 요청자가 속한 room 검색
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
                             {
-                                string[] delimiterChars = { ", " };
-                                string[] users = group.Value.Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-                                if (users.Contains(reqBody.userID))
+                                if (userList[temp.Value.Item2].Equals(reqBody.userID))
                                 {
-                                    msg = msg + group.Key + "^" + group.Value.Item1 + "^" + group.Value.Item2 + "&";
+                                    // roomNo & accessRight & roomName & usersInRoomNo ^ userNo ^ managerRight ... ^&
+                                    msg = msg + temp.Value.Item1 + "&" + roomList[temp.Value.Item1].Item1 + "&" + roomList[temp.Value.Item1].Item2 + "&";
+                                    // 요청자가 속한 room의 정보 검색
+                                    foreach(KeyValuePair<int, Tuple<int, int, int>> user in usersInRoom)
+                                    {
+                                        if (temp.Value.Item1.Equals(user.Value.Item1))
+                                        {
+                                            msg = msg + user.Key + "^" + user.Value.Item2 + "^" + user.Value.Item3 + "^^";
+                                        }
+                                    }
+                                    msg = msg + "*";
                                 }
                             }
 
                             PacketMessage resMsg = new PacketMessage();
-                            resMsg.Body = new ResponseGroupList()
+                            resMsg.Body = new ResponseRoomList()
                             {
                                 msg = msg
                             };
                             resMsg.Header = new Header()
                             {
                                 MSGID = msgid++,
-                                MSGTYPE = CONSTANTS.RES_GROUPLIST,
+                                MSGTYPE = CONSTANTS.RES_ROOMLIST,
                                 BODYLEN = (uint)resMsg.Body.GetSize(),
                                 FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
                                 LASTMSG = CONSTANTS.LASTMSG,
@@ -635,60 +676,105 @@ namespace TestServer
                             break;
                         }
                     // 채팅방 생성 요청
-                    case CONSTANTS.REQ_CREATE_GROUP:
+                    case CONSTANTS.REQ_CREATE_ROOM:
                         {
-                            RequestCreateGroup reqBody = (RequestCreateGroup)message.Body;
-                            // group 부호화
-                            string encryptedGroup = AESEncrypt256(reqBody.group, "0");
+                            RequestCreateRoom reqBody = (RequestCreateRoom)message.Body;
 
                             // DB에 채팅방 추가
                             // insert 완료하면 pid 가져와서 저장하기
 
                             // DB insert
-                            long pid = 0;
+                            int roomNo = 0;
                             using (MySqlConnection conn = new MySqlConnection(connStr))
                             {
                                 conn.Open();
-                                string sql = string.Format("insert into encryptedroom (roomName, userID) values ('{0}', '{1}')", reqBody.groupName, encryptedGroup);
+                                string sql = string.Format("insert into roomList (accessRight, roomName) values ('{0}', '{1}')", reqBody.accessRight, reqBody.roomName);
 
                                 MySqlCommand cmd = new MySqlCommand(sql, conn);
                                 cmd.ExecuteNonQuery();
-                                pid = cmd.LastInsertedId;
+                                roomNo = (int)cmd.LastInsertedId;
+                            }
+                            // roomList에 추가
+                            roomList.Add(roomNo, new Tuple<int, string>(reqBody.accessRight, reqBody.roomName));
+
+                            // 채팅방 생성자 번호 검색
+                            int creatorNo = 0;
+                            foreach(KeyValuePair<int, string> temp in userList)
+                            {
+                                if (temp.Value == reqBody.creator)
+                                {
+                                    creatorNo = temp.Key;
+                                    break;
+                                }
+                            }
+                            // 채팅방 생성자 추가
+                            int usersInRoomNoCreator = 0;
+                            using (MySqlConnection conn = new MySqlConnection(connStr))
+                            {
+                                conn.Open();
+                                string sql = string.Format("insert into usersInRoom (roomNo, userNo, managerRight) values ('{0}', '{1}', '{2}')", roomNo, creatorNo, 2);
+
+                                MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                cmd.ExecuteNonQuery();
+                                usersInRoomNoCreator = (int)cmd.LastInsertedId;
+                            }
+                            usersInRoom.Add(usersInRoomNoCreator, new Tuple<int, int, int>(roomNo, creatorNo, 2));
+
+                            // 채팅방 회원 번호 검색, 채팅방 회원 추가
+                            int usersInRoomNo = 0;
+                            int userNo = 0;
+                            foreach (string user in reqBody.users)
+                            {
+                                foreach (KeyValuePair<int, string> temp in userList)
+                                {
+                                    if (temp.Value == user)
+                                    {
+                                        userNo = temp.Key;
+                                        break;
+                                    }
+                                }
+                                using (MySqlConnection conn = new MySqlConnection(connStr))
+                                {
+                                    conn.Open();
+                                    string sql = string.Format("insert into usersInRoom (roomNo, userNo, managerRight) values ('{0}', '{1}', '{2}')", roomNo, userNo, 0);
+
+                                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                    cmd.ExecuteNonQuery();
+                                    usersInRoomNo = (int)cmd.LastInsertedId;
+                                }
+                                usersInRoom.Add(usersInRoomNo, new Tuple<int, int, int>(roomNo, userNo, 0));
                             }
 
-                            // groupList에 추가
-                            groupList.Add(pid, new Tuple<string, string>(reqBody.groupName, reqBody.group));
-
-                            log.Info(groupList[pid]);
-                            string msg = string.Empty;
-                            msg = pid + "&" + reqBody.groupName + "&" + reqBody.group;
-
                             // 채팅방 생성 로그 기록
-                            log.Info(string.Format("{0} 채팅방 생성 {1}번 회원 : {2}", reqBody.groupName, pid, reqBody.group));
+                            log.Info(string.Format("{0} 채팅방 생성 {1}번 회원 : {2}", reqBody.roomName, roomNo, reqBody.users));
+
+                            string msg = roomNo + "&" + reqBody.accessRight + "&" + reqBody.roomName + "&" + reqBody.creator + "&" + usersInRoomNoCreator + "&";
+
+                            foreach(var temp in usersInRoom)
+                            {
+                                if (temp.Value.Item1.Equals(roomNo))
+                                {
+                                    msg = msg + temp.Key + "^" + temp.Value.Item2 + "^" + temp.Value.Item3 + "^^";
+                                }
+                            }
 
                             PacketMessage resMsg = new PacketMessage();
-                            resMsg.Body = new ResponseCreateGroupSuccess()
+                            resMsg.Body = new ResponseCreateRoomSuccess()
                             {
                                 msg = msg
                             };
                             resMsg.Header = new Header()
                             {
                                 MSGID = msgid++,
-                                MSGTYPE = CONSTANTS.RES_CREATE_GROUP_SUCCESS,
+                                MSGTYPE = CONSTANTS.RES_CREATE_ROOM_SUCCESS,
                                 BODYLEN = (uint)resMsg.Body.GetSize(),
                                 FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
                                 LASTMSG = CONSTANTS.LASTMSG,
                                 SEQ = 0
                             };
 
-                            // encryptedGroup 복호화
-                            // string usersInGroup = AESDecrypt256(encryptedGroup, "0");
-                            string[] delimiterChars = { ", " };
-                            // string[] users = usersInGroup.Split(delimiterChars);
-                            string[] users = reqBody.group.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-
                             // 채팅방 인원에게 채팅방 생성 완료 메시지 발송
-                            foreach (string user in users)
+                            foreach (string user in reqBody.users)
                             {
                                 SendMessageClient(resMsg, user);
                             }
@@ -714,9 +800,15 @@ namespace TestServer
                                 SEQ = 0
                             };
 
-                            // group에 속한 모든 사용자에게 송출
-                            string[] delimiterChars = { ", " };
-                            List<string> usersInGroup = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+                            List<string> usersInGroup = new List<string>();
+                            // room에 속한 모든 사용자에게 송출
+                            foreach (var temp in usersInRoom)
+                            {
+                                if (temp.Value.Item1.Equals(reqBody.roomNo))
+                                {
+                                    usersInGroup.Add(userList[temp.Value.Item2]);
+                                }
+                            }
 
                             foreach (string user in usersInGroup)
                             {
@@ -729,47 +821,40 @@ namespace TestServer
                         {
                             RequestInvitation reqBody = (RequestInvitation)message.Body;
 
-                            string[] delimiterChars = { ", " };
-                            List<string> users = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-                            users.AddRange(reqBody.invitedUsers);
-
-                            // sort
-                            users.Sort();
-
-                            // Join
-                            string usersInGroup = string.Join(", ", users);
-
-                            // 부호화
-                            string encryptedGroup = AESEncrypt256(usersInGroup, "0");
-
-                            // 채팅방 이름
-                            string roomName = usersInGroup + " Group";
-                            if (roomName.Length > 20)
+                            // 채팅방 회원 번호 검색, 채팅방 회원 추가
+                            int usersInRoomNo = 0;
+                            int userNo = 0;
+                            string msg = reqBody.roomNo + "&";
+                            foreach (string user in reqBody.invitedUsers)
                             {
-                                roomName = roomName.Substring(0, 20);
+                                foreach (KeyValuePair<int, string> temp in userList)
+                                {
+                                    if (temp.Value == user)
+                                    {
+                                        userNo = temp.Key;
+                                        break;
+                                    }
+                                }
+                                using (MySqlConnection conn = new MySqlConnection(connStr))
+                                {
+                                    conn.Open();
+                                    string sql = string.Format("insert into usersInRoom (roomNo, userNo, managerRight) values ('{0}', '{1}', '{2}')", reqBody.roomNo, userNo, 0);
+
+                                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                    cmd.ExecuteNonQuery();
+                                    usersInRoomNo = (int)cmd.LastInsertedId;
+                                }
+                                // usersInRoom 추가
+                                usersInRoom.Add(usersInRoomNo, new Tuple<int, int, int>(reqBody.roomNo, userNo, 0));
+                                msg = msg + usersInRoomNo + "^" + userNo + "^^";
+                                // 채팅방 초대 로그 기록
+                                log.Info(string.Format("{0}님이 {1}번 {2}채팅방에 초대됨", user, reqBody.roomNo, roomList[reqBody.roomNo].Item2));
                             }
-                            
-
-                            // DB 변경
-                            using (MySqlConnection conn = new MySqlConnection(connStr))
-                            {
-                                conn.Open();
-                                string sql = string.Format("update encryptedroom set userID='{0}', roomName='{1}' where pid={2}", encryptedGroup, roomName , reqBody.pid);
-
-                                MySqlCommand cmd = new MySqlCommand(sql, conn);
-                                cmd.ExecuteNonQuery();
-                            }
-
-                            // groupList 변경
-                            groupList[reqBody.pid] = new Tuple<string, string>(roomName, usersInGroup);
-
-                            // 채팅방 초대 로그 기록
-                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에 초대됨", usersInGroup, reqBody.pid, roomName));
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseInvitationSuccess()
                             {
-                                msg = reqBody.msg
+                                msg = msg
                             };
                             resMsg.Header = new Header()
                             {
@@ -781,58 +866,53 @@ namespace TestServer
                                 SEQ = 0
                             };
 
-                            // group에 포함된 인원에게 송출
-                            foreach (string user in users)
+                            // room에 포함된 인원에게 송출
+                            foreach (string user in reqBody.invitedUsers)
                             {
                                 SendMessageClient(resMsg, user);
                             }
                             break;
                         }
                     // 채팅방 나가기 요청
-                    case CONSTANTS.REQ_LEAVE_GROUP:
+                    case CONSTANTS.REQ_LEAVE_ROOM:
                         {
-                            RequestLeaveGroup reqBody = (RequestLeaveGroup)message.Body;
+                            RequestLeaveRoom reqBody = (RequestLeaveRoom)message.Body;
 
-                            // DB 변경
-                            string[] delimiterChars = { ", " };
-                            List<string> users = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-
-                            users.Remove(reqBody.user);
-                            string usersInGroup = string.Join(", ", users);
-
-                            // 채팅방 이름
-                            string roomName = usersInGroup + " Group";
-                            if (usersInGroup.Length > 20)
+                            int userNo = 0;
+                            foreach(KeyValuePair<int, string> temp in userList)
                             {
-                                roomName = usersInGroup.Substring(0, 20);
+                                if (temp.Value.Equals(reqBody.userID))
+                                {
+                                    userNo = temp.Key;
+                                    break;
+                                }
                             }
 
-                            string encryptedGroup = AESEncrypt256(usersInGroup, "0");
-
+                            // DB 변경
                             using (MySqlConnection conn = new MySqlConnection(connStr))
                             {
                                 conn.Open();
-                                string sql = string.Format("update encryptedroom set userID='{0}', roomName='{1}' where pid={2}", encryptedGroup, roomName , reqBody.pid);
+                                string sql = string.Format("delete from usersInRoom where roomNo = {0} and userNo = {1}", reqBody.roomNo, userNo);
 
                                 MySqlCommand cmd = new MySqlCommand(sql, conn);
                                 cmd.ExecuteNonQuery();
                             }
 
                             // groupList 변경
-                            groupList[reqBody.pid] = new Tuple<string, string>(roomName, usersInGroup);
+                            roomList[reqBody.roomNo] = new Tuple<string, string>(roomName, usersInGroup);
 
-                            // 채팅방 초대 로그 기록
+                            // 채팅방 나가기 로그 기록
                             log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 나감", reqBody.user, reqBody.pid, roomName));
 
                             PacketMessage resMsg = new PacketMessage();
-                            resMsg.Body = new ResponseLeaveGroupSuccess()
+                            resMsg.Body = new ResponseLeaveRoomSuccess()
                             {
                                 msg = reqBody.pid + "&" + reqBody.user
                             };
                             resMsg.Header = new Header()
                             {
                                 MSGID = msgid++,
-                                MSGTYPE = CONSTANTS.RES_LEAVE_GROUP_SUCCESS,
+                                MSGTYPE = CONSTANTS.RES_LEAVE_ROOM_SUCCESS,
                                 BODYLEN = (uint)resMsg.Body.GetSize(),
                                 FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
                                 LASTMSG = CONSTANTS.LASTMSG,
@@ -847,7 +927,6 @@ namespace TestServer
                             {
                                 SendMessageClient(resMsg, user);
                             }
-
                             break;
                         }
                     // 파일 전송 준비 요청
@@ -959,7 +1038,7 @@ namespace TestServer
 
                             // 채팅방에 포함된 회원들에게 파일 수신 요청
                             string[] delimiterChars = { ", " };
-                            List<string> users = new List<string>(groupList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+                            List<string> users = new List<string>(roomList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
 
                             foreach (string user in users)
                             {
@@ -1082,7 +1161,7 @@ namespace TestServer
                                         };
 
                                         string[] delimiterChars = { ", " };
-                                        List<string> users = new List<string>(groupList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+                                        List<string> users = new List<string>(roomList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
 
                                         foreach (string user in users)
                                         {

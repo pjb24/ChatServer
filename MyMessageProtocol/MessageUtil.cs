@@ -69,17 +69,17 @@ namespace MyMessageProtocol
                 case CONSTANTS.RES_USERLIST:
                     body = new ResponseUserList(bBuffer);
                     break;
-                case CONSTANTS.REQ_GROUPLIST:
-                    body = new RequestGroupList(bBuffer);
+                case CONSTANTS.REQ_ROOMLIST:
+                    body = new RequestRoomList(bBuffer);
                     break;
-                case CONSTANTS.RES_GROUPLIST:
-                    body = new ResponseGroupList(bBuffer);
+                case CONSTANTS.RES_ROOMLIST:
+                    body = new ResponseRoomList(bBuffer);
                     break;
-                case CONSTANTS.REQ_CREATE_GROUP:
-                    body = new RequestCreateGroup(bBuffer);
+                case CONSTANTS.REQ_CREATE_ROOM:
+                    body = new RequestCreateRoom(bBuffer);
                     break;
-                case CONSTANTS.RES_CREATE_GROUP_SUCCESS:
-                    body = new ResponseCreateGroupSuccess(bBuffer);
+                case CONSTANTS.RES_CREATE_ROOM_SUCCESS:
+                    body = new ResponseCreateRoomSuccess(bBuffer);
                     break;
                 case CONSTANTS.REQ_CHAT:
                     body = new RequestChat(bBuffer);
@@ -93,11 +93,11 @@ namespace MyMessageProtocol
                 case CONSTANTS.RES_INVITATION_SUCCESS:
                     body = new ResponseInvitationSuccess(bBuffer);
                     break;
-                case CONSTANTS.REQ_LEAVE_GROUP:
-                    body = new RequestLeaveGroup(bBuffer);
+                case CONSTANTS.REQ_LEAVE_ROOM:
+                    body = new RequestLeaveRoom(bBuffer);
                     break;
-                case CONSTANTS.RES_LEAVE_GROUP_SUCCESS:
-                    body = new ResponseLeaveGroupSuccess(bBuffer);
+                case CONSTANTS.RES_LEAVE_ROOM_SUCCESS:
+                    body = new ResponseLeaveRoomSuccess(bBuffer);
                     break;
                 case CONSTANTS.REQ_SEND_FILE:
                     body = new RequestSendFile(bBuffer);
