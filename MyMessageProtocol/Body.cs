@@ -511,8 +511,8 @@ namespace MyMessageProtocol
     public class ResponseLeaveRoomSuccess : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
+        public int roomNo = 0;
+        public string userID = string.Empty;
 
         public ResponseLeaveRoomSuccess() { }
         public ResponseLeaveRoomSuccess(byte[] bytes)
@@ -521,8 +521,8 @@ namespace MyMessageProtocol
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
+            roomNo = int.Parse(temp[0]);
+            userID = temp[1];
         }
 
         public byte[] GetBytes()
@@ -571,7 +571,7 @@ namespace MyMessageProtocol
         }
     }
 
-    // 채팅방 추방 요청
+    // 채팅방 추방 완료
     public class ResponseBanishUser : ISerializable
     {
         public string msg = string.Empty;
@@ -879,7 +879,7 @@ namespace MyMessageProtocol
     public class RequestSendFile : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
+        public int roomNo = 0;
         public string userID = string.Empty;
         public long FILESIZE = 0;
         public string FILENAME = string.Empty;
@@ -892,7 +892,7 @@ namespace MyMessageProtocol
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
+            roomNo = int.Parse(temp[0]);
             userID = temp[1];
             FILESIZE = long.Parse(temp[2]);
             FILENAME = temp[3];
@@ -917,7 +917,7 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public uint MSGID = 0;
-        public long pid = 0;
+        public int roomNo = 0;
         public string filePath = string.Empty;
         public string userID = string.Empty;
 
@@ -929,7 +929,7 @@ namespace MyMessageProtocol
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             MSGID = uint.Parse(temp[0]);
-            pid = long.Parse(temp[1]);
+            roomNo = int.Parse(temp[1]);
             filePath = temp[2];
             userID = temp[3];
         }

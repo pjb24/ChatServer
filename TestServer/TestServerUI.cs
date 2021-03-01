@@ -86,7 +86,7 @@ namespace TestServer
                 int countTable = Convert.ToInt32(cmd.ExecuteScalar());
                 if (countTable != 1)
                 {
-                    sql = "create table userList(No int not null auto_increment primary key, userID varchar(20) not null primary key, userPW varchar(20) not null)";
+                    sql = "create table userList(No int not null auto_increment primary key, userID varchar(20) not null, userPW varchar(20) not null)";
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                 }
@@ -867,9 +867,12 @@ namespace TestServer
                             };
 
                             // room에 포함된 인원에게 송출
-                            foreach (string user in reqBody.invitedUsers)
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
                             {
-                                SendMessageClient(resMsg, user);
+                                if (temp.Value.Item1.Equals(reqBody.roomNo))
+                                {
+                                    SendMessageClient(resMsg, userList[temp.Value.Item2]);
+                                }
                             }
                             break;
                         }
@@ -878,6 +881,7 @@ namespace TestServer
                         {
                             RequestLeaveRoom reqBody = (RequestLeaveRoom)message.Body;
 
+                            // 회원 번호 검색
                             int userNo = 0;
                             foreach(KeyValuePair<int, string> temp in userList)
                             {
@@ -898,16 +902,25 @@ namespace TestServer
                                 cmd.ExecuteNonQuery();
                             }
 
-                            // groupList 변경
-                            roomList[reqBody.roomNo] = new Tuple<string, string>(roomName, usersInGroup);
+                            // usersInRoom 제거
+                            int usersInRoomNo = 0;
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                            {
+                                if (temp.Value.Item1.Equals(reqBody.roomNo) && temp.Value.Item2.Equals(userNo))
+                                {
+                                    usersInRoomNo = temp.Key;
+                                    break;
+                                }
+                            }
+                            usersInRoom.Remove(usersInRoomNo);
 
                             // 채팅방 나가기 로그 기록
-                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 나감", reqBody.user, reqBody.pid, roomName));
+                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 나감", reqBody.userID, reqBody.roomNo, roomList[reqBody.roomNo].Item2));
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseLeaveRoomSuccess()
                             {
-                                msg = reqBody.pid + "&" + reqBody.user
+                                msg = reqBody.roomNo + "&" + reqBody.userID
                             };
                             resMsg.Header = new Header()
                             {
@@ -920,12 +933,15 @@ namespace TestServer
                             };
 
                             // 나간 사람에게 송출
-                            SendMessageClient(resMsg, reqBody.user);
+                            SendMessageClient(resMsg, reqBody.userID);
 
-                            // group에 속한 모든 사용자에게 송출
-                            foreach (string user in users)
+                            // room에 속한 모든 사용자에게 송출
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
                             {
-                                SendMessageClient(resMsg, user);
+                                if (temp.Value.Item1.Equals(reqBody.roomNo))
+                                {
+                                    SendMessageClient(resMsg, userList[temp.Value.Item2]);
+                                }
                             }
                             break;
                         }
@@ -934,7 +950,7 @@ namespace TestServer
                         {
                             RequestSendFile reqBody = (RequestSendFile)message.Body;
 
-                            string msg = message.Header.MSGID + "&" + reqBody.pid + "&" + reqBody.filePath + "&" + reqBody.userID;
+                            string msg = message.Header.MSGID + "&" + reqBody.roomNo + "&" + reqBody.filePath + "&" + reqBody.userID;
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseSendFile()
@@ -1024,7 +1040,7 @@ namespace TestServer
                             PacketMessage reqMsg = new PacketMessage();
                             reqMsg.Body = new RequestSendFile()
                             {
-                                msg = reqBody.pid + "&" + reqBody.userID + "&" + fileSize + "&" + fileName + "&" + filePath
+                                msg = reqBody.roomNo + "&" + reqBody.userID + "&" + fileSize + "&" + fileName + "&" + filePath
                             };
                             reqMsg.Header = new Header()
                             {
@@ -1037,14 +1053,13 @@ namespace TestServer
                             };
 
                             // 채팅방에 포함된 회원들에게 파일 수신 요청
-                            string[] delimiterChars = { ", " };
-                            List<string> users = new List<string>(roomList[reqBody.pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-
-                            foreach (string user in users)
+                            foreach(KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
                             {
-                                SendMessageClient(reqMsg, user);
+                                if (temp.Value.Item1.Equals(reqBody.roomNo))
+                                {
+                                    SendMessageClient(reqMsg, userList[temp.Value.Item2]);
+                                }
                             }
-
                             break;
                         }
                     case CONSTANTS.RES_SEND_FILE:
@@ -1160,6 +1175,7 @@ namespace TestServer
                                             SEQ = msgSeq++
                                         };
 
+                                        /*
                                         string[] delimiterChars = { ", " };
                                         List<string> users = new List<string>(roomList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
 
@@ -1167,6 +1183,7 @@ namespace TestServer
                                         {
                                             SendMessageClient(fileMsg, user);
                                         }
+                                        */
                                     }
                                 }
                             }
