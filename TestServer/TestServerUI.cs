@@ -86,7 +86,7 @@ namespace TestServer
                 int countTable = Convert.ToInt32(cmd.ExecuteScalar());
                 if (countTable != 1)
                 {
-                    sql = "create table userList(No int not null auto_increment primary key, userID varchar(20) not null, userPW varchar(20) not null)";
+                    sql = "create table userList(No int not null auto_increment primary key, userID varchar(20) not null, userPW char(32) not null)";
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                 }
@@ -415,6 +415,19 @@ namespace TestServer
             return Output;
         }
 
+        private int SearchUserNoByUserID(string userID)
+        {
+            int userNo = 0;
+            foreach(KeyValuePair<int, string> temp in userList)
+            {
+                if (temp.Value.Equals(userID))
+                {
+                    userNo = temp.Key;
+                    break;
+                }
+            }
+            return userNo;
+        }
 
         private void OnReceived(PacketMessage message, TcpClient client)
         {
@@ -436,7 +449,8 @@ namespace TestServer
                                 using (MySqlConnection conn = new MySqlConnection(connStr))
                                 {
                                     conn.Open();
-                                    string sql = string.Format("insert into userList values ('{0}', '{1}')", reqBody.userID, reqBody.userPW);
+
+                                    string sql = string.Format("insert into userList (userID, userPW) values ('{0}', '{1}')", reqBody.userID, reqBody.userPW);
 
                                     MySqlCommand cmd = new MySqlCommand(sql, conn);
                                     cmd.ExecuteNonQuery();
@@ -725,14 +739,7 @@ namespace TestServer
                             int userNo = 0;
                             foreach (string user in reqBody.users)
                             {
-                                foreach (KeyValuePair<int, string> temp in userList)
-                                {
-                                    if (temp.Value == user)
-                                    {
-                                        userNo = temp.Key;
-                                        break;
-                                    }
-                                }
+                                userNo = SearchUserNoByUserID(user);
                                 using (MySqlConnection conn = new MySqlConnection(connStr))
                                 {
                                     conn.Open();
@@ -827,14 +834,7 @@ namespace TestServer
                             string msg = reqBody.roomNo + "&";
                             foreach (string user in reqBody.invitedUsers)
                             {
-                                foreach (KeyValuePair<int, string> temp in userList)
-                                {
-                                    if (temp.Value == user)
-                                    {
-                                        userNo = temp.Key;
-                                        break;
-                                    }
-                                }
+                                userNo = SearchUserNoByUserID(user);
                                 using (MySqlConnection conn = new MySqlConnection(connStr))
                                 {
                                     conn.Open();
@@ -883,14 +883,7 @@ namespace TestServer
 
                             // 회원 번호 검색
                             int userNo = 0;
-                            foreach(KeyValuePair<int, string> temp in userList)
-                            {
-                                if (temp.Value.Equals(reqBody.userID))
-                                {
-                                    userNo = temp.Key;
-                                    break;
-                                }
-                            }
+                            userNo = SearchUserNoByUserID(reqBody.userID);
 
                             // DB 변경
                             using (MySqlConnection conn = new MySqlConnection(connStr))
@@ -936,6 +929,201 @@ namespace TestServer
                             SendMessageClient(resMsg, reqBody.userID);
 
                             // room에 속한 모든 사용자에게 송출
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                            {
+                                if (temp.Value.Item1.Equals(reqBody.roomNo))
+                                {
+                                    SendMessageClient(resMsg, userList[temp.Value.Item2]);
+                                }
+                            }
+                            break;
+                        }
+                    // 채팅방 추방
+                    case CONSTANTS.REQ_BANISH_USER:
+                        {
+                            RequestBanishUser reqBody = (RequestBanishUser)message.Body;
+
+                            int banishedUserNo = 0;
+                            int usersInRoomNo = 0;
+
+                            // 추방될 회원 번호 검색
+                            banishedUserNo = SearchUserNoByUserID(reqBody.banishedUser);
+                            // DB 변경
+                            using (MySqlConnection conn = new MySqlConnection(connStr))
+                            {
+                                conn.Open();
+                                string sql = string.Format("delete from usersInRoom where roomNo = {0} and userNo = {1}", reqBody.roomNo, banishedUserNo);
+
+                                MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                cmd.ExecuteNonQuery();
+                            }
+                            // usersInRoom 변경
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                            {
+                                if (temp.Value.Item1.Equals(reqBody.roomNo) && temp.Value.Item2.Equals(banishedUserNo))
+                                {
+                                    usersInRoomNo = temp.Key;
+                                    break;
+                                }
+                            }
+                            usersInRoom.Remove(usersInRoomNo);
+                            // 로그 기록
+                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 추방됨", reqBody.banishedUser, reqBody.roomNo, roomList[reqBody.roomNo].Item2));
+                            // 채팅방 회원들에게 송출
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Body = new ResponseLeaveRoomSuccess()
+                            {
+                                msg = reqBody.roomNo + "&" + reqBody.banishedUser
+                            };
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_BANISH_USER_SUCCESS,
+                                BODYLEN = (uint)resMsg.Body.GetSize(),
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+
+                            // 추방된 사람에게 송출
+                            SendMessageClient(resMsg, reqBody.banishedUser);
+
+                            // room에 속한 모든 사용자에게 송출
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                            {
+                                if (temp.Value.Item1.Equals(reqBody.roomNo))
+                                {
+                                    SendMessageClient(resMsg, userList[temp.Value.Item2]);
+                                }
+                            }
+                            break;
+                        }
+                    // 채팅방 설정 변경 요청
+                    case CONSTANTS.REQ_CHANGE_ROOM_CONFIG:
+                        {
+                            RequestChangeRoomConfig reqBody = (RequestChangeRoomConfig)message.Body;
+
+                            string accessRightToString = string.Empty;
+                            if (reqBody.accessRight == 0)
+                            {
+                                accessRightToString = "비공개";
+                            }
+                            else
+                            {
+                                accessRightToString = "공개";
+                            }
+
+                            // DB 변경
+                            using (MySqlConnection conn = new MySqlConnection(connStr))
+                            {
+                                conn.Open();
+                                string sql = string.Format("update roomList set accessRight = {0}, roomName = '{1}' where No = {2}", reqBody.accessRight, reqBody.roomName, reqBody.roomNo);
+
+                                MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                cmd.ExecuteNonQuery();
+                            }
+                            // 로그 기록
+                            // 변경점 확인
+                            // accessRight 와 roomName 변경
+                            if (!reqBody.accessRight.Equals(roomList[reqBody.roomNo].Item1) && !reqBody.roomName.Equals(roomList[reqBody.roomNo].Item2))
+                            {
+                                log.Info(string.Format("{0}번 채팅방의 공개 여부가 {1}로, 채팅방 이름이 {2}로 변경됨", reqBody.roomNo, accessRightToString, reqBody.roomName));
+                            }
+                            // accessRight 변경
+                            else if (!reqBody.roomName.Equals(roomList[reqBody.roomNo].Item1))
+                            {
+                                log.Info(string.Format("{0}번 채팅방의 공개 여부가 {1} 변경됨", reqBody.roomNo, accessRightToString));
+                            }
+                            // roomName 변경
+                            else if (!reqBody.roomName.Equals(roomList[reqBody.roomNo].Item2))
+                            {
+                                log.Info(string.Format("{0}번 채팅방의 이름이 {1}로 변경됨", reqBody.roomNo, reqBody.roomName));
+                            }
+                            // roomList 변경
+                            roomList[reqBody.roomNo] = new Tuple<int, string>(reqBody.accessRight, reqBody.roomName);
+
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Body = new ResponseChangeRoomConfigSuccess()
+                            {
+                                msg = reqBody.msg
+                            };
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_CHANGE_ROOM_CONFIG_SUCCESS,
+                                BODYLEN = (uint)resMsg.Body.GetSize(),
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+
+                            // 채팅방에 속한 모든 사용자에게 송출
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                            {
+                                if (temp.Value.Item1.Equals(reqBody.roomNo))
+                                {
+                                    SendMessageClient(resMsg, userList[temp.Value.Item2]);
+                                }
+                            }
+                            break;
+                        }
+                    // 관리자 권한 변경 요청
+                    case CONSTANTS.REQ_CHANGE_MANAGEMENT_RIGHTS:
+                        {
+                            RequestChangeManagementRights reqBody = (RequestChangeManagementRights)message.Body;
+
+                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                            {
+                                foreach(int userNo in reqBody.changedUsersNo)
+                                {
+                                    if (temp.Value.Item1.Equals(reqBody.roomNo) && temp.Value.Item2.Equals(userNo) && temp.Value.Item3.Equals(0))
+                                    {
+                                        // DB 변경
+                                        using (MySqlConnection conn = new MySqlConnection(connStr))
+                                        {
+                                            conn.Open();
+                                            string sql = string.Format("update usersInRoom set managerRight = 1 where roomNo = {0} and userNo = {1}", reqBody.roomNo, userNo);
+
+                                            MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                        usersInRoom[temp.Key] = new Tuple<int, int, int>(reqBody.roomNo, userNo, 1);
+                                        // 로그 기록
+                                        log.Info(string.Format("{0}번 {1} 채팅방에서 {2} 회원에게 관리자 권한이 부여됨", reqBody.roomNo, roomList[reqBody.roomNo].Item2, userList[userNo]));
+                                    }
+                                    else if (temp.Value.Item1.Equals(reqBody.roomNo) && temp.Value.Item2.Equals(userNo) && temp.Value.Item3.Equals(1))
+                                    {
+                                        // DB 변경
+                                        using (MySqlConnection conn = new MySqlConnection(connStr))
+                                        {
+                                            conn.Open();
+                                            string sql = string.Format("update usersInRoom set managerRight = 0 where roomNo = {0} and userNo = {1}", reqBody.roomNo, userNo);
+
+                                            MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                            cmd.ExecuteNonQuery();
+                                        }
+                                        usersInRoom[temp.Key] = new Tuple<int, int, int>(reqBody.roomNo, userNo, 0);
+                                        // 로그 기록
+                                        log.Info(string.Format("{0}번 {1} 채팅방에서 {2} 회원에게 관리자 권한이 해제됨", reqBody.roomNo, roomList[reqBody.roomNo].Item2, userList[userNo]));
+                                    }
+                                }
+                            }
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Body = new ResponseChangeManagementRightsSuccess()
+                            {
+                                msg = reqBody.msg
+                            };
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_CHANGE_MANAGEMENT_RIGHTS_SUCCESS,
+                                BODYLEN = (uint)resMsg.Body.GetSize(),
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+
+                            // 채팅방 회원에게 송출
                             foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
                             {
                                 if (temp.Value.Item1.Equals(reqBody.roomNo))

@@ -63,29 +63,19 @@ namespace MyMessageProtocol
         // 채팅방 추방 요청
         public const uint REQ_BANISH_USER = 0X61;
         // 채팅방 추방 완료
-        public const uint RES_BANISH_USER = 0X62;
+        public const uint RES_BANISH_USER_SUCCESS = 0X62;
 
         // 채팅방 이름 변경 요청
-        public const uint REQ_CHANGE_ROOM_NAME = 0X63;
+        public const uint REQ_CHANGE_ROOM_CONFIG = 0X63;
         // 채팅방 이름 변경 완료
-        public const uint RES_CHANGE_ROOM_NAME = 0X64;
-
-        // 채팅방 접근 제한 변경 요청
-        public const uint REQ_CHANGE_ACCESS_RIGHT = 0X65;
-        // 채팅방 접근 제한 변경 완료
-        public const uint RES_CHANGE_ACCESS_RIGHT = 0X66;
+        public const uint RES_CHANGE_ROOM_CONFIG_SUCCESS = 0X64;
 
 
         // 채팅방 생성자 사용 프로토콜
         // 채팅방 관리자 권한 부여 요청
-        public const uint REQ_GRANT_MANAGEMENT_RIGHTS = 0X71;
+        public const uint REQ_CHANGE_MANAGEMENT_RIGHTS = 0X71;
         // 채팅방 관리자 권한 부여 완료
-        public const uint RES_GRANT_MANAGEMENT_RIGHTS = 0X72;
-
-        // 채팅방 관리자 권한 해제 요청
-        public const uint REQ_TURN_OFF_MANAGEMENT_RIGHTS = 0X73;
-        // 채팅방 관리자 권한 해제 완료
-        public const uint RES_TURN_OFF_MANAGEMENT_RIGHTS = 0X74;
+        public const uint RES_CHANGE_MANAGEMENT_RIGHTS_SUCCESS = 0X72;
 
         // 파일 전송 준비 요청
         public const uint REQ_SEND_FILE = 0X81;

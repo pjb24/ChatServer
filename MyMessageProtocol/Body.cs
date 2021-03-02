@@ -543,8 +543,8 @@ namespace MyMessageProtocol
     public class RequestBanishUser : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
+        public int roomNo = 0;
+        public string banishedUser = string.Empty;
 
         public RequestBanishUser() { }
         public RequestBanishUser(byte[] bytes)
@@ -553,8 +553,8 @@ namespace MyMessageProtocol
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
+            roomNo = int.Parse(temp[0]);
+            banishedUser = temp[1];
         }
 
         public byte[] GetBytes()
@@ -572,21 +572,21 @@ namespace MyMessageProtocol
     }
 
     // 채팅방 추방 완료
-    public class ResponseBanishUser : ISerializable
+    public class ResponseBanishUserSuccess : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
+        public int roomNo = 0;
+        public string banishedUser = string.Empty;
 
-        public ResponseBanishUser() { }
-        public ResponseBanishUser(byte[] bytes)
+        public ResponseBanishUserSuccess() { }
+        public ResponseBanishUserSuccess(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
+            roomNo = int.Parse(temp[0]);
+            banishedUser = temp[1];
         }
 
         public byte[] GetBytes()
@@ -603,23 +603,23 @@ namespace MyMessageProtocol
         }
     }
 
-    // 채팅방 이름 변경 요청
-    public class RequestChangeRoomName : ISerializable
+    // 채팅방 설정 변경 요청
+    public class RequestChangeRoomConfig : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
+        public int roomNo = 0;
+        public int accessRight = 0;
         public string roomName = string.Empty;
 
-        public RequestChangeRoomName() { }
-        public RequestChangeRoomName(byte[] bytes)
+        public RequestChangeRoomConfig() { }
+        public RequestChangeRoomConfig(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
+            roomNo = int.Parse(temp[0]);
+            accessRight = int.Parse(temp[1]);
             roomName = temp[2];
         }
 
@@ -637,23 +637,23 @@ namespace MyMessageProtocol
         }
     }
 
-    // 채팅방 이름 변경 완료
-    public class ResponseChangeRoomName : ISerializable
+    // 채팅방 설정 변경 완료
+    public class ResponseChangeRoomConfigSuccess : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
+        public int roomNo = 0;
+        public int accessRight = 0;
         public string roomName = string.Empty;
 
-        public ResponseChangeRoomName() { }
-        public ResponseChangeRoomName(byte[] bytes)
+        public ResponseChangeRoomConfigSuccess() { }
+        public ResponseChangeRoomConfigSuccess(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
+            roomNo = int.Parse(temp[0]);
+            accessRight = int.Parse(temp[1]);
             roomName = temp[2];
         }
 
@@ -671,24 +671,29 @@ namespace MyMessageProtocol
         }
     }
 
-    // 채팅방 접근 제한 변경 요청
-    public class RequestChangeAccessRight : ISerializable
+    // 채팅방 관리자 권한 변경 요청
+    public class RequestChangeManagementRights : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
-        public int accessRight = 0;
+        public int roomNo = 0;
+        public List<int> changedUsersNo = new List<int>();
 
-        public RequestChangeAccessRight() { }
-        public RequestChangeAccessRight(byte[] bytes)
+        public RequestChangeManagementRights() { }
+        public RequestChangeManagementRights(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
-            accessRight = int.Parse(temp[2]);
+            roomNo = int.Parse(temp[0]);
+            string users = temp[1];
+
+            string[] chars = { "^" };
+            string[] usersNo = users.Split(chars, StringSplitOptions.RemoveEmptyEntries);
+            foreach(string userNo in usersNo)
+            {
+                changedUsersNo.Add(int.Parse(userNo));
+            }
         }
 
         public byte[] GetBytes()
@@ -705,160 +710,29 @@ namespace MyMessageProtocol
         }
     }
 
-    // 채팅방 접근 제한 변경 완료
-    public class ResponseChangeAccessRight : ISerializable
+    // 채팅방 관리자 권한 변경 완료
+    public class ResponseChangeManagementRightsSuccess : ISerializable
     {
         public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
-        public int accessRight = 0;
+        public int roomNo = 0;
+        public List<int> changedUsersNo = new List<int>();
 
-        public ResponseChangeAccessRight() { }
-        public ResponseChangeAccessRight(byte[] bytes)
+        public ResponseChangeManagementRightsSuccess() { }
+        public ResponseChangeManagementRightsSuccess(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
-            accessRight = int.Parse(temp[2]);
-        }
+            roomNo = int.Parse(temp[0]);
+            string users = temp[1];
 
-        public byte[] GetBytes()
-        {
-            byte[] bytes = new byte[GetSize()];
-            bytes = Encoding.Unicode.GetBytes(msg);
-
-            return bytes;
-        }
-
-        public int GetSize()
-        {
-            return Encoding.Unicode.GetBytes(msg).Length;
-        }
-    }
-
-    // 채팅방 관리자 권한 부여 요청
-    public class RequestGrantManagementRights : ISerializable
-    {
-        public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
-        public int managerRight = 0;
-
-        public RequestGrantManagementRights() { }
-        public RequestGrantManagementRights(byte[] bytes)
-        {
-            msg = Encoding.Unicode.GetString(bytes);
-
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
-            managerRight = int.Parse(temp[2]);
-        }
-
-        public byte[] GetBytes()
-        {
-            byte[] bytes = new byte[GetSize()];
-            bytes = Encoding.Unicode.GetBytes(msg);
-
-            return bytes;
-        }
-
-        public int GetSize()
-        {
-            return Encoding.Unicode.GetBytes(msg).Length;
-        }
-    }
-
-    // 채팅방 관리자 권한 부여 완료
-    public class ResponseGrantManagementRights : ISerializable
-    {
-        public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
-        public int managerRight = 0;
-
-        public ResponseGrantManagementRights() { }
-        public ResponseGrantManagementRights(byte[] bytes)
-        {
-            msg = Encoding.Unicode.GetString(bytes);
-
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
-            managerRight = int.Parse(temp[2]);
-        }
-
-        public byte[] GetBytes()
-        {
-            byte[] bytes = new byte[GetSize()];
-            bytes = Encoding.Unicode.GetBytes(msg);
-
-            return bytes;
-        }
-
-        public int GetSize()
-        {
-            return Encoding.Unicode.GetBytes(msg).Length;
-        }
-    }
-
-    // 채팅방 관리자 권한 해제 요청
-    public class RequestTurnOffManagementRights : ISerializable
-    {
-        public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
-        public int managerRight = 0;
-
-        public RequestTurnOffManagementRights() { }
-        public RequestTurnOffManagementRights(byte[] bytes)
-        {
-            msg = Encoding.Unicode.GetString(bytes);
-
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
-            managerRight = int.Parse(temp[2]);
-        }
-
-        public byte[] GetBytes()
-        {
-            byte[] bytes = new byte[GetSize()];
-            bytes = Encoding.Unicode.GetBytes(msg);
-
-            return bytes;
-        }
-
-        public int GetSize()
-        {
-            return Encoding.Unicode.GetBytes(msg).Length;
-        }
-    }
-
-    // 채팅방 관리자 권한 해제 완료
-    public class ResponseTurnOffManagementRights : ISerializable
-    {
-        public string msg = string.Empty;
-        public long pid = 0;
-        public string receivedID = string.Empty;
-        public int managerRight = 0;
-
-        public ResponseTurnOffManagementRights() { }
-        public ResponseTurnOffManagementRights(byte[] bytes)
-        {
-            msg = Encoding.Unicode.GetString(bytes);
-
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            pid = long.Parse(temp[0]);
-            receivedID = temp[1];
-            managerRight = int.Parse(temp[2]);
+            string[] chars = { "^" };
+            string[] usersNo = users.Split(chars, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string userNo in usersNo)
+            {
+                changedUsersNo.Add(int.Parse(userNo));
+            }
         }
 
         public byte[] GetBytes()
