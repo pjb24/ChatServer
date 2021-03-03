@@ -86,7 +86,7 @@ namespace TestServer
                 int countTable = Convert.ToInt32(cmd.ExecuteScalar());
                 if (countTable != 1)
                 {
-                    sql = "create table userList(No int not null auto_increment primary key, userID varchar(20) not null, userPW char(32) not null)";
+                    sql = "create table userList(No int not null auto_increment primary key, userID varchar(20) not null, userPW char(64) not null)";
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                 }
@@ -536,7 +536,7 @@ namespace TestServer
                                     using (MySqlConnection conn = new MySqlConnection(connStr))
                                     {
                                         conn.Open();
-                                        string sql = string.Format("select count(userID) from users where userID='{0}' and userPW='{1}'", reqBody.userID, reqBody.userPW);
+                                        string sql = string.Format("select count(userID) from userList where userID='{0}' and userPW='{1}'", reqBody.userID, reqBody.userPW);
 
                                         MySqlCommand cmd = new MySqlCommand(sql, conn);
                                         isCorrect = Convert.ToInt32(cmd.ExecuteScalar());
