@@ -99,6 +99,24 @@ namespace MyMessageProtocol
                 case CONSTANTS.RES_LEAVE_ROOM_SUCCESS:
                     body = new ResponseLeaveRoomSuccess(bBuffer);
                     break;
+                case CONSTANTS.REQ_BANISH_USER:
+                    body = new RequestBanishUser(bBuffer);
+                    break;
+                case CONSTANTS.RES_BANISH_USER_SUCCESS:
+                    body = new ResponseBanishUserSuccess(bBuffer);
+                    break;
+                case CONSTANTS.REQ_CHANGE_ROOM_CONFIG:
+                    body = new RequestChangeRoomConfig(bBuffer);
+                    break;
+                case CONSTANTS.RES_CHANGE_ROOM_CONFIG_SUCCESS:
+                    body = new ResponseChangeRoomConfigSuccess(bBuffer);
+                    break;
+                case CONSTANTS.REQ_CHANGE_MANAGEMENT_RIGHTS:
+                    body = new RequestChangeManagementRights(bBuffer);
+                    break;
+                case CONSTANTS.RES_CHANGE_MANAGEMENT_RIGHTS_SUCCESS:
+                    body = new ResponseChangeManagementRightsSuccess(bBuffer);
+                    break;
                 case CONSTANTS.REQ_SEND_FILE:
                     body = new RequestSendFile(bBuffer);
                     break;

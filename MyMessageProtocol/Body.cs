@@ -291,8 +291,6 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public int accessRight = 0;
         public string roomName = string.Empty;
-        public string creator = string.Empty;
-        public int usersInRoomNoCreator = 0;
         public Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
 
         public ResponseCreateRoomSuccess() { }
@@ -305,9 +303,7 @@ namespace MyMessageProtocol
             roomNo = int.Parse(temp[0]);
             accessRight = int.Parse(temp[1]);
             roomName = temp[2];
-            creator = temp[3];
-            usersInRoomNoCreator = int.Parse(temp[4]);
-            string tempUsers = temp[5];
+            string tempUsers = temp[3];
 
             string[] chars = { "^^" };
             string[] userInfos = tempUsers.Split(chars, StringSplitOptions.RemoveEmptyEntries);

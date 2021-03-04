@@ -55,6 +55,11 @@ namespace TestServer
         {
             InitializeComponent();
 
+            if (BitConverter.IsLittleEndian)
+                Console.WriteLine("Little Endian");
+            else
+                Console.WriteLine("Big Endian");
+
             // Server Thread
             Thread t = new Thread(InitSocket);
             // background option
@@ -97,7 +102,7 @@ namespace TestServer
                 countTable = Convert.ToInt32(cmd.ExecuteScalar());
                 if (countTable != 1)
                 {
-                    sql = "create table usersInRoom(No int not null auto_increment primary key, roomNo int not null, userNo int not null)";
+                    sql = "create table usersInRoom(No int not null auto_increment primary key, roomNo int not null, userNo int not null, managerRight int not null)";
                     cmd.CommandText = sql;
                     cmd.ExecuteNonQuery();
                 }
@@ -137,7 +142,7 @@ namespace TestServer
                 reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
-                    roomList.Add((int)reader["No"], new Tuple<int, string>((int)reader["accessRight"], reader["roomName"].ToString()));
+                    roomList.Add((int)reader["No"], new Tuple<int, string>((sbyte)reader["accessRight"], reader["roomName"].ToString()));
                 }
                 // 동작 확인용
                 foreach (KeyValuePair<int, Tuple<int, string>> temp in roomList)
@@ -665,6 +670,7 @@ namespace TestServer
                                     {
                                         if (temp.Value.Item1.Equals(user.Value.Item1))
                                         {
+                                            // usersInRoomNo ^ userNo ^ managerRight ^^
                                             msg = msg + user.Key + "^" + user.Value.Item2 + "^" + user.Value.Item3 + "^^";
                                         }
                                     }
@@ -713,14 +719,7 @@ namespace TestServer
 
                             // 채팅방 생성자 번호 검색
                             int creatorNo = 0;
-                            foreach(KeyValuePair<int, string> temp in userList)
-                            {
-                                if (temp.Value == reqBody.creator)
-                                {
-                                    creatorNo = temp.Key;
-                                    break;
-                                }
-                            }
+                            creatorNo = SearchUserNoByUserID(reqBody.creator);
                             // 채팅방 생성자 추가
                             int usersInRoomNoCreator = 0;
                             using (MySqlConnection conn = new MySqlConnection(connStr))
@@ -755,7 +754,7 @@ namespace TestServer
                             // 채팅방 생성 로그 기록
                             log.Info(string.Format("{0} 채팅방 생성 {1}번 회원 : {2}", reqBody.roomName, roomNo, reqBody.users));
 
-                            string msg = roomNo + "&" + reqBody.accessRight + "&" + reqBody.roomName + "&" + reqBody.creator + "&" + usersInRoomNoCreator + "&";
+                            string msg = roomNo + "&" + reqBody.accessRight + "&" + reqBody.roomName + "&";
 
                             foreach(var temp in usersInRoom)
                             {
@@ -1072,6 +1071,11 @@ namespace TestServer
                         {
                             RequestChangeManagementRights reqBody = (RequestChangeManagementRights)message.Body;
 
+                            List<int> tempKey = new List<int>();
+                            List<int> tempRoomNo = new List<int>();
+                            List<int> tempUserNo = new List<int>();
+                            List<int> tempRight = new List<int>();
+
                             foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
                             {
                                 foreach(int userNo in reqBody.changedUsersNo)
@@ -1087,7 +1091,11 @@ namespace TestServer
                                             MySqlCommand cmd = new MySqlCommand(sql, conn);
                                             cmd.ExecuteNonQuery();
                                         }
-                                        usersInRoom[temp.Key] = new Tuple<int, int, int>(reqBody.roomNo, userNo, 1);
+                                        tempKey.Add(temp.Key);
+                                        tempRoomNo.Add(reqBody.roomNo);
+                                        tempUserNo.Add(userNo);
+                                        tempRight.Add(1);
+                                        // usersInRoom[temp.Key] = new Tuple<int, int, int>(reqBody.roomNo, userNo, 1);
                                         // 로그 기록
                                         log.Info(string.Format("{0}번 {1} 채팅방에서 {2} 회원에게 관리자 권한이 부여됨", reqBody.roomNo, roomList[reqBody.roomNo].Item2, userList[userNo]));
                                     }
@@ -1102,12 +1110,22 @@ namespace TestServer
                                             MySqlCommand cmd = new MySqlCommand(sql, conn);
                                             cmd.ExecuteNonQuery();
                                         }
-                                        usersInRoom[temp.Key] = new Tuple<int, int, int>(reqBody.roomNo, userNo, 0);
+                                        tempKey.Add(temp.Key);
+                                        tempRoomNo.Add(reqBody.roomNo);
+                                        tempUserNo.Add(userNo);
+                                        tempRight.Add(0);
+                                        // usersInRoom[temp.Key] = new Tuple<int, int, int>(reqBody.roomNo, userNo, 0);
                                         // 로그 기록
                                         log.Info(string.Format("{0}번 {1} 채팅방에서 {2} 회원에게 관리자 권한이 해제됨", reqBody.roomNo, roomList[reqBody.roomNo].Item2, userList[userNo]));
                                     }
                                 }
                             }
+
+                            for (int i = 0; i < tempKey.Count; i++)
+                            {
+                                usersInRoom[tempKey[i]] = new Tuple<int, int, int>(tempRoomNo[i], tempUserNo[i], tempRight[i]);
+                            }
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseChangeManagementRightsSuccess()
                             {
