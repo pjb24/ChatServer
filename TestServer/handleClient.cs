@@ -65,6 +65,11 @@ namespace TestServer
 
                     PacketMessage message = MessageUtil.Receive(stream);
 
+                    if (message == null)
+                    {
+                        continue;
+                    }
+
                     if (message.Header.MSGTYPE == CONSTANTS.RES_SEND_FILE)
                     {
                         autoEvent.WaitOne();
@@ -89,6 +94,10 @@ namespace TestServer
                     clientSocket.Close();
                     stream.Close();
                 }
+            }
+            catch (NullReferenceException nre)
+            {
+                Console.WriteLine(string.Format("doChat - NullRefereceException : {0}", nre.StackTrace));
             }
             catch (Exception ex)
             {
