@@ -42,15 +42,15 @@ namespace TestServer
 
         private void doChat()
         {
+            int MessageCount = 0;
             // 함수 내에서 사용할 변수 선언
-            NetworkStream stream = null;
+            NetworkStream stream = default(NetworkStream);
             try
             {
                 // 초기화
                 byte[] buffer = new byte[1024];
                 string msg = string.Empty;
                 // int bytes = 0;
-                int MessageCount = 0;
 
                 // client message 대기
                 while (true)
@@ -63,22 +63,29 @@ namespace TestServer
                     msg = msg.Substring(0, msg.IndexOf("$"));
                     */
 
-                    PacketMessage message = MessageUtil.Receive(stream);
-
-                    if (message == null)
+                    try
                     {
-                        continue;
-                    }
+                        PacketMessage message = MessageUtil.Receive(stream);
 
-                    if (message.Header.MSGTYPE == CONSTANTS.RES_SEND_FILE)
+                        if (message == null)
+                        {
+                            continue;
+                        }
+
+                        if (message.Header.MSGTYPE == CONSTANTS.RES_SEND_FILE)
+                        {
+                            autoEvent.WaitOne();
+                        }
+
+                        // OnReceived 이벤트 발생, MessageDisplayHandler delegate에 msg와 clientSocket 전달, OnReceived에서 메시지 처리
+                        if (OnReceived != null)
+                            // OnReceived(msg, clientSocket);
+                            OnReceived(message, clientSocket);
+                    }
+                    catch (Exception e)
                     {
-                        autoEvent.WaitOne();
+                        Console.WriteLine(e.StackTrace);
                     }
-
-                    // OnReceived 이벤트 발생, MessageDisplayHandler delegate에 msg와 clientSocket 전달, OnReceived에서 메시지 처리
-                    if (OnReceived != null)
-                        // OnReceived(msg, clientSocket);
-                        OnReceived(message, clientSocket);
                 }
             }
             // 오류 발생 시 OnDisconnected call, socket 닫고, stream 닫기
