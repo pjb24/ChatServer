@@ -558,17 +558,26 @@ namespace TestServer
 
                                         // 로그인 완료 메시지 작성 & 발송
                                         PacketMessage resMsg = new PacketMessage();
+                                        resMsg.Body = new ResponseSignInSuccess()
+                                        {
+                                            userID = reqBody.userID
+                                        };
                                         resMsg.Header = new Header()
                                         {
                                             MSGID = msgid++,
                                             MSGTYPE = CONSTANTS.RES_SIGNIN_SUCCESS,
-                                            BODYLEN = 0,
+                                            BODYLEN = (uint)resMsg.Body.GetSize(),
                                             FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
                                             LASTMSG = CONSTANTS.LASTMSG,
                                             SEQ = 0
                                         };
 
-                                        SendMessageClient(resMsg, reqBody.userID);
+                                        // SendMessageClient(resMsg, reqBody.userID);
+
+                                        foreach (KeyValuePair<string, TcpClient> temp in clientList)
+                                        {
+                                            SendMessageClient(resMsg, temp.Value);
+                                        }
                                     }
                                     else
                                     {
@@ -623,7 +632,25 @@ namespace TestServer
                             // 로그아웃 로그 기록
                             log.Info(string.Format("{0}님이 로그아웃", reqBody.userID));
 
-                            // 다른 회원에게도 알림 추가할 것
+                            // 다른 회원에게도 알림
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Body = new ResponseSignOutSuccess()
+                            {
+                                userID = reqBody.userID
+                            };
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_SIGNOUT_SUCCESS,
+                                BODYLEN = (uint)resMsg.Body.GetSize(),
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+                            foreach (KeyValuePair<string, TcpClient> temp in clientList)
+                            {
+                                SendMessageClient(resMsg, temp.Value);
+                            }
                             break;
                         }
                     // 회원목록 요청
@@ -716,6 +743,32 @@ namespace TestServer
                                 SEQ = 0
                             };
                             SendMessageClient(resMsg, reqBody.userID);
+                            break;
+                        }
+                    // 온라인 회원 목록 요청
+                    case CONSTANTS.REQ_ONLINE_USERLIST:
+                        {
+                            string msg = string.Empty;
+                            foreach (KeyValuePair<string, TcpClient> temp in clientList)
+                            {
+                                msg = msg + temp.Key + "&";
+                            }
+
+                            PacketMessage resMsg = new PacketMessage();
+                            resMsg.Body = new ResponseOnlineUserList()
+                            {
+                                msg = msg
+                            };
+                            resMsg.Header = new Header()
+                            {
+                                MSGID = msgid++,
+                                MSGTYPE = CONSTANTS.RES_ONLINE_USERLIST,
+                                BODYLEN = (uint)resMsg.Body.GetSize(),
+                                FRAGMENTED = CONSTANTS.NOT_FRAGMENTED,
+                                LASTMSG = CONSTANTS.LASTMSG,
+                                SEQ = 0
+                            };
+                            SendMessageClient(resMsg, client);
                             break;
                         }
                     // 채팅방 생성 요청

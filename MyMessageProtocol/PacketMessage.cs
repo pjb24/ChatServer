@@ -27,6 +27,8 @@ namespace MyMessageProtocol
 
         // 로그아웃 통보
         public const uint REQ_SIGNOUT = 0X26;
+        // 로그아웃 완료
+        public const uint RES_SIGNOUT_SUCCESS = 0X27;
 
         // 회원목록 요청
         public const uint REQ_USERLIST = 0X31;
@@ -37,6 +39,11 @@ namespace MyMessageProtocol
         public const uint REQ_ROOMLIST = 0X33;
         // 채팅방 목록 반환
         public const uint RES_ROOMLIST = 0X34;
+
+        // 온라인 회원 목록 요청
+        public const uint REQ_ONLINE_USERLIST = 0X35;
+        // 온라인 회원 목록 반환
+        public const uint RES_ONLINE_USERLIST = 0X36;
 
         // 채팅방 생성 요청
         public const uint REQ_CREATE_ROOM = 0X41;

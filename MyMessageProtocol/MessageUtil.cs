@@ -63,8 +63,14 @@ namespace MyMessageProtocol
                 case CONSTANTS.REQ_SIGNIN:
                     body = new RequestSignIn(bBuffer);
                     break;
+                case CONSTANTS.RES_SIGNIN_SUCCESS:
+                    body = new ResponseSignInSuccess(bBuffer);
+                    break;
                 case CONSTANTS.REQ_SIGNOUT:
                     body = new RequestSignOut(bBuffer);
+                    break;
+                case CONSTANTS.RES_SIGNOUT_SUCCESS:
+                    body = new ResponseSignOutSuccess(bBuffer);
                     break;
                 case CONSTANTS.RES_USERLIST:
                     body = new ResponseUserList(bBuffer);
@@ -74,6 +80,9 @@ namespace MyMessageProtocol
                     break;
                 case CONSTANTS.RES_ROOMLIST:
                     body = new ResponseRoomList(bBuffer);
+                    break;
+                case CONSTANTS.RES_ONLINE_USERLIST:
+                    body = new ResponseOnlineUserList(bBuffer);
                     break;
                 case CONSTANTS.REQ_CREATE_ROOM:
                     body = new RequestCreateRoom(bBuffer);

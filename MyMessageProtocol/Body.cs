@@ -104,6 +104,31 @@ namespace MyMessageProtocol
         }
     }
 
+    // 로그인 성공
+    public class ResponseSignInSuccess : ISerializable
+    {
+        public string userID = string.Empty;
+
+        public ResponseSignInSuccess() { }
+        public ResponseSignInSuccess(byte[] bytes)
+        {
+            userID = Encoding.Unicode.GetString(bytes);
+        }
+
+        public byte[] GetBytes()
+        {
+            byte[] bytes = new byte[GetSize()];
+            bytes = Encoding.Unicode.GetBytes(userID);
+
+            return bytes;
+        }
+
+        public int GetSize()
+        {
+            return Encoding.Unicode.GetBytes(userID).Length;
+        }
+    }
+
     // 로그아웃 요청 ID
     public class RequestSignOut : ISerializable
     {
@@ -111,6 +136,31 @@ namespace MyMessageProtocol
 
         public RequestSignOut() { }
         public RequestSignOut(byte[] bytes)
+        {
+            userID = Encoding.Unicode.GetString(bytes);
+        }
+
+        public byte[] GetBytes()
+        {
+            byte[] bytes = new byte[GetSize()];
+            bytes = Encoding.Unicode.GetBytes(userID);
+
+            return bytes;
+        }
+
+        public int GetSize()
+        {
+            return Encoding.Unicode.GetBytes(userID).Length;
+        }
+    }
+
+    // 로그아웃 완료
+    public class ResponseSignOutSuccess : ISerializable
+    {
+        public string userID = string.Empty;
+
+        public ResponseSignOutSuccess() { }
+        public ResponseSignOutSuccess(byte[] bytes)
         {
             userID = Encoding.Unicode.GetString(bytes);
         }
@@ -231,6 +281,43 @@ namespace MyMessageProtocol
                         // usersInRoomNo, Tuple(roomNo, userNo, managerRight)
                         usersInRoom.Add(int.Parse(userInfo[0]), new Tuple<int, int, int>(int.Parse(roomInfo[0]), int.Parse(userInfo[1]), int.Parse(userInfo[2])));
                     }
+                }
+            }
+        }
+
+        public byte[] GetBytes()
+        {
+            byte[] bytes = new byte[GetSize()];
+            bytes = Encoding.Unicode.GetBytes(msg);
+
+            return bytes;
+        }
+
+        public int GetSize()
+        {
+            return Encoding.Unicode.GetBytes(msg).Length;
+        }
+    }
+
+    // 온라인 회원 목록 반환
+    public class ResponseOnlineUserList : ISerializable
+    {
+        public string msg = string.Empty;
+        public List<string> onlineUserList = new List<string>();
+
+        public ResponseOnlineUserList() { }
+        public ResponseOnlineUserList(byte[] bytes)
+        {
+            if (bytes.Length != 0)
+            {
+                msg = Encoding.Unicode.GetString(bytes);
+
+                string[] delimiterChars = { "&" };
+                string[] onlineUserInfo = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string temp in onlineUserInfo)
+                {
+                    onlineUserList.Add(temp);
                 }
             }
         }
