@@ -658,19 +658,42 @@ namespace TestServer
                             RequestRoomList reqBody = (RequestRoomList)message.Body;
 
                             string msg = string.Empty;
-                            // 요청자가 속한 room 검색
-                            foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                            int userNo = 0;
+                            userNo = SearchUserNoByUserID(reqBody.userID);
+                            foreach (KeyValuePair<int, Tuple<int, string>> room in roomList)
                             {
-                                if (userList[temp.Value.Item2].Equals(reqBody.userID))
+                                // 비공개 room 검색
+                                if (room.Value.Item1.Equals(0))
+                                {
+                                    foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
+                                    {
+                                        if (temp.Value.Item2.Equals(userNo) && room.Key.Equals(temp.Value.Item1))
+                                        {
+                                            // roomNo & accessRight & roomName &
+                                            msg = msg + room.Key + "&" + room.Value.Item1 + "&" + room.Value.Item2 + "&";
+                                            // 요청자가 속한 room의 정보 검색
+                                            foreach (KeyValuePair<int, Tuple<int, int, int>> user in usersInRoom)
+                                            {
+                                                if (room.Key.Equals(user.Value.Item1))
+                                                {
+                                                    // usersInRoomNo ^ userNo ^ managerRight ^^
+                                                    msg = msg + user.Key + "^" + user.Value.Item2 + "^" + user.Value.Item3 + "^^";
+                                                }
+                                            }
+                                            msg = msg + "*";
+                                        }
+                                    } 
+                                }
+                                // 공개 room 검색
+                                else
                                 {
                                     // roomNo & accessRight & roomName & usersInRoomNo ^ userNo ^ managerRight ... ^&
-                                    msg = msg + temp.Value.Item1 + "&" + roomList[temp.Value.Item1].Item1 + "&" + roomList[temp.Value.Item1].Item2 + "&";
-                                    // 요청자가 속한 room의 정보 검색
-                                    foreach(KeyValuePair<int, Tuple<int, int, int>> user in usersInRoom)
+                                    msg = msg + room.Key + "&" + room.Value.Item1 + "&" + room.Value.Item2 + "&";
+                                    // room에 속한 유저 정보
+                                    foreach (KeyValuePair<int, Tuple<int, int, int>> user in usersInRoom)
                                     {
-                                        if (temp.Value.Item1.Equals(user.Value.Item1))
+                                        if (room.Key.Equals(user.Value.Item1))
                                         {
-                                            // usersInRoomNo ^ userNo ^ managerRight ^^
                                             msg = msg + user.Key + "^" + user.Value.Item2 + "^" + user.Value.Item3 + "^^";
                                         }
                                     }
@@ -779,10 +802,24 @@ namespace TestServer
                                 SEQ = 0
                             };
 
-                            // 채팅방 인원에게 채팅방 생성 완료 메시지 발송
-                            foreach (string user in reqBody.users)
+                            // 비공개 채팅방
+                            if (reqBody.accessRight == 0)
                             {
-                                SendMessageClient(resMsg, user);
+                                // 채팅방 생성자에게 메시지 발송
+                                SendMessageClient(resMsg, reqBody.creator);
+                                // 채팅방 인원에게 채팅방 생성 완료 메시지 발송
+                                foreach (string user in reqBody.users)
+                                {
+                                    SendMessageClient(resMsg, user);
+                                }
+                            }
+                            // 공개 채팅방
+                            else
+                            {
+                                foreach (KeyValuePair<string, TcpClient> temp in clientList)
+                                {
+                                    SendMessageClient(resMsg, temp.Value);
+                                }
                             }
                             break;
                         }
@@ -808,6 +845,7 @@ namespace TestServer
 
                             List<string> usersInGroup = new List<string>();
                             // room에 속한 모든 사용자에게 송출
+                            /*
                             foreach (var temp in usersInRoom)
                             {
                                 if (temp.Value.Item1.Equals(reqBody.roomNo))
@@ -815,10 +853,17 @@ namespace TestServer
                                     usersInGroup.Add(userList[temp.Value.Item2]);
                                 }
                             }
-
+                            */
+                            /*
                             foreach (string user in usersInGroup)
                             {
                                 SendMessageClient(resMsg, user);
+                            }
+                            */
+
+                            foreach (KeyValuePair<string, TcpClient> temp in clientList)
+                            {
+                                SendMessageClient(resMsg, temp.Value);
                             }
                             break;
                         }

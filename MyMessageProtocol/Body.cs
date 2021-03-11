@@ -215,18 +215,22 @@ namespace MyMessageProtocol
 
                 // roomNo, Tuple(accessRight, roomName)
                 roomList.Add(int.Parse(roomInfo[0]), new Tuple<int, string>(int.Parse(roomInfo[1]), roomInfo[2]));
-                string tempUsers = roomInfo[3];
-
-                string[] cuttingChars = { "^^" };
-                string[] roomUsers = tempUsers.Split(cuttingChars, StringSplitOptions.RemoveEmptyEntries);
-
-                foreach(string user in roomUsers)
+                
+                if (roomInfo.Length == 4)
                 {
-                    string[] splitChars = { "^" };
-                    string[] userInfo = user.Split(splitChars, StringSplitOptions.RemoveEmptyEntries);
+                    string tempUsers = roomInfo[3];
 
-                    // usersInRoomNo, Tuple(roomNo, userNo, managerRight)
-                    usersInRoom.Add(int.Parse(userInfo[0]), new Tuple<int, int, int>(int.Parse(roomInfo[0]), int.Parse(userInfo[1]), int.Parse(userInfo[2])));
+                    string[] cuttingChars = { "^^" };
+                    string[] roomUsers = tempUsers.Split(cuttingChars, StringSplitOptions.RemoveEmptyEntries);
+
+                    foreach (string user in roomUsers)
+                    {
+                        string[] splitChars = { "^" };
+                        string[] userInfo = user.Split(splitChars, StringSplitOptions.RemoveEmptyEntries);
+
+                        // usersInRoomNo, Tuple(roomNo, userNo, managerRight)
+                        usersInRoom.Add(int.Parse(userInfo[0]), new Tuple<int, int, int>(int.Parse(roomInfo[0]), int.Parse(userInfo[1]), int.Parse(userInfo[2])));
+                    }
                 }
             }
         }
