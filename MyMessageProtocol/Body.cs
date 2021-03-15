@@ -426,8 +426,7 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string userID = string.Empty;
-        public string chatMsg = string.Empty;
+        public string encrypted = string.Empty;
 
         public RequestChat() { }
         public RequestChat(byte[] bytes)
@@ -437,8 +436,7 @@ namespace MyMessageProtocol
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             roomNo = int.Parse(temp[0]);
-            userID = temp[1];
-            chatMsg = temp[2];
+            encrypted = temp[1];
         }
 
         public byte[] GetBytes()
@@ -460,8 +458,7 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string userID = string.Empty;
-        public string chatMsg = string.Empty;
+        public string encrypted = string.Empty;
 
         public ResponseChat() { }
         public ResponseChat(byte[] bytes)
@@ -471,8 +468,7 @@ namespace MyMessageProtocol
             string[] delimiterChars = { "&" };
             string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
             roomNo = int.Parse(temp[0]);
-            userID = temp[1];
-            chatMsg = temp[2];
+            encrypted = temp[1];
         }
 
         public byte[] GetBytes()
