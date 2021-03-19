@@ -22,6 +22,7 @@ using System.Security.Cryptography;
 
 using log4net;
 using MySql.Data.MySqlClient;
+using Newtonsoft.Json;
 
 using MyMessageProtocol;
 
@@ -466,10 +467,17 @@ namespace TestServer
                                 DisplayText("Register : " + reqBody.userID);
 
                                 // 회원가입 성공 메시지 작성
+
+                                User user = new User()
+                                {
+                                    No = No,
+                                    UserID = reqBody.userID
+                                };
+
                                 PacketMessage resMsg = new PacketMessage();
                                 resMsg.Body = new ResponseRegisterSuccess()
                                 {
-                                    msg = No + "&" + reqBody.userID
+                                    msg = JsonConvert.SerializeObject(user)
                                 };
                                 resMsg.Header = new Header()
                                 {
@@ -487,9 +495,9 @@ namespace TestServer
                                 SendMessageClient(resMsg, client);
 
                                 // 로그인 중인 사용자에게 새로운 회원이 생겼음을 알림
-                                foreach (string user in clientList.Keys)
+                                foreach (string onlineUser in clientList.Keys)
                                 {
-                                    SendMessageClient(resMsg, user);
+                                    SendMessageClient(resMsg, onlineUser);
                                 }
                             }
                             else
@@ -624,11 +632,7 @@ namespace TestServer
                     case CONSTANTS.REQ_SIGNOUT:
                         {
                             RequestSignOut reqBody = (RequestSignOut)message.Body;
-                            if (clientList.ContainsKey(reqBody.userID))
-                            {
-                                clientList.Remove(reqBody.userID);
-                            }
-
+                            
                             // 로그아웃 로그 기록
                             log.Info(string.Format("{0}님이 로그아웃", reqBody.userID));
 
@@ -651,21 +655,32 @@ namespace TestServer
                             {
                                 SendMessageClient(resMsg, temp.Value);
                             }
+                            if (clientList.ContainsKey(reqBody.userID))
+                            {
+                                clientList.Remove(reqBody.userID);
+                            }
                             break;
                         }
                     // 회원목록 요청
                     case CONSTANTS.REQ_USERLIST:
                         {
+                            List<User> users = new List<User>();
+
                             string msg = string.Empty;
                             foreach (KeyValuePair<int, string> temp in userList)
                             {
-                                msg = msg + temp.Key + "^" + temp.Value + "&";
+                                User user = new User()
+                                {
+                                    No = temp.Key,
+                                    UserID = temp.Value
+                                };
+                                users.Add(user);
                             }
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseUserList()
                             {
-                                msg = msg
+                                msg = JsonConvert.SerializeObject(users)
                             };
                             resMsg.Header = new Header()
                             {
@@ -687,6 +702,7 @@ namespace TestServer
                             string msg = string.Empty;
                             int userNo = 0;
                             userNo = SearchUserNoByUserID(reqBody.userID);
+                            List<Room> rooms = new List<Room>();
                             foreach (KeyValuePair<int, Tuple<int, string>> room in roomList)
                             {
                                 // 비공개 room 검색
@@ -697,36 +713,64 @@ namespace TestServer
                                         if (temp.Value.Item2.Equals(userNo) && room.Key.Equals(temp.Value.Item1))
                                         {
                                             // roomNo & accessRight & roomName &
-                                            msg = msg + room.Key + "&" + room.Value.Item1 + "&" + room.Value.Item2 + "&";
+                                            Room room1 = new Room()
+                                            {
+                                                No = room.Key,
+                                                AccessRight = room.Value.Item1,
+                                                Name = room.Value.Item2
+                                            };
+                                            List<Relation> relations = new List<Relation>();
                                             // 요청자가 속한 room의 정보 검색
                                             foreach (KeyValuePair<int, Tuple<int, int, int>> user in usersInRoom)
                                             {
                                                 if (room.Key.Equals(user.Value.Item1))
                                                 {
                                                     // usersInRoomNo ^ userNo ^ managerRight ^^
-                                                    msg = msg + user.Key + "^" + user.Value.Item2 + "^" + user.Value.Item3 + "^^";
+                                                    Relation relation = new Relation()
+                                                    {
+                                                        No = user.Key,
+                                                        UserNo = user.Value.Item2,
+                                                        ManagerRight = user.Value.Item3
+                                                    };
+                                                    relations.Add(relation);
                                                 }
                                             }
-                                            msg = msg + "*";
+                                            room1.Relation = relations;
+                                            rooms.Add(room1);
                                         }
-                                    } 
+                                    }
                                 }
                                 // 공개 room 검색
                                 else
                                 {
                                     // roomNo & accessRight & roomName & usersInRoomNo ^ userNo ^ managerRight ... ^&
-                                    msg = msg + room.Key + "&" + room.Value.Item1 + "&" + room.Value.Item2 + "&";
+                                    Room room1 = new Room()
+                                    {
+                                        No = room.Key,
+                                        AccessRight = room.Value.Item1,
+                                        Name = room.Value.Item2
+                                    };
+                                    List<Relation> relations = new List<Relation>();
                                     // room에 속한 유저 정보
                                     foreach (KeyValuePair<int, Tuple<int, int, int>> user in usersInRoom)
                                     {
                                         if (room.Key.Equals(user.Value.Item1))
                                         {
-                                            msg = msg + user.Key + "^" + user.Value.Item2 + "^" + user.Value.Item3 + "^^";
+                                            Relation relation = new Relation()
+                                            {
+                                                No = user.Key,
+                                                UserNo = user.Value.Item2,
+                                                ManagerRight = user.Value.Item3
+                                            };
+                                            relations.Add(relation);
                                         }
                                     }
-                                    msg = msg + "*";
+                                    room1.Relation = relations;
+                                    rooms.Add(room1);
                                 }
                             }
+
+                            msg = JsonConvert.SerializeObject(rooms);
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseRoomList()
@@ -748,16 +792,21 @@ namespace TestServer
                     // 온라인 회원 목록 요청
                     case CONSTANTS.REQ_ONLINE_USERLIST:
                         {
-                            string msg = string.Empty;
+                            List<User> users = new List<User>();
+
                             foreach (KeyValuePair<string, TcpClient> temp in clientList)
                             {
-                                msg = msg + temp.Key + "&";
+                                User user = new User()
+                                {
+                                    UserID = temp.Key
+                                };
+                                users.Add(user);
                             }
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseOnlineUserList()
                             {
-                                msg = msg
+                                msg = JsonConvert.SerializeObject(users)
                             };
                             resMsg.Header = new Header()
                             {
@@ -795,7 +844,7 @@ namespace TestServer
 
                             // 채팅방 생성자 번호 검색
                             int creatorNo = 0;
-                            creatorNo = SearchUserNoByUserID(reqBody.creator);
+                            creatorNo = reqBody.creatorNo;
                             // 채팅방 생성자 추가
                             int usersInRoomNoCreator = 0;
                             using (MySqlConnection conn = new MySqlConnection(connStr))
@@ -812,9 +861,9 @@ namespace TestServer
                             // 채팅방 회원 번호 검색, 채팅방 회원 추가
                             int usersInRoomNo = 0;
                             int userNo = 0;
-                            foreach (string user in reqBody.users)
+                            foreach (int user in reqBody.users)
                             {
-                                userNo = SearchUserNoByUserID(user);
+                                userNo = user;
                                 using (MySqlConnection conn = new MySqlConnection(connStr))
                                 {
                                     conn.Open();
@@ -830,20 +879,34 @@ namespace TestServer
                             // 채팅방 생성 로그 기록
                             log.Info(string.Format("{0} 채팅방 생성 {1}번 회원 : {2}", reqBody.roomName, roomNo, reqBody.users));
 
-                            string msg = roomNo + "&" + reqBody.accessRight + "&" + reqBody.roomName + "&";
+                            Room room = new Room()
+                            {
+                                No = roomNo,
+                                AccessRight = reqBody.accessRight,
+                                Name = reqBody.roomName
+                            };
 
-                            foreach(var temp in usersInRoom)
+                            List<Relation> relations = new List<Relation>();
+
+                            foreach(KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
                             {
                                 if (temp.Value.Item1.Equals(roomNo))
                                 {
-                                    msg = msg + temp.Key + "^" + temp.Value.Item2 + "^" + temp.Value.Item3 + "^^";
+                                    Relation relation = new Relation()
+                                    {
+                                        No = temp.Key,
+                                        UserNo = temp.Value.Item2,
+                                        ManagerRight = temp.Value.Item3
+                                    };
+                                    relations.Add(relation);
                                 }
                             }
+                            room.Relation = relations;
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseCreateRoomSuccess()
                             {
-                                msg = msg
+                                msg = JsonConvert.SerializeObject(room)
                             };
                             resMsg.Header = new Header()
                             {
@@ -859,11 +922,11 @@ namespace TestServer
                             if (reqBody.accessRight == 0)
                             {
                                 // 채팅방 생성자에게 메시지 발송
-                                SendMessageClient(resMsg, reqBody.creator);
+                                SendMessageClient(resMsg, userList[reqBody.creatorNo]);
                                 // 채팅방 인원에게 채팅방 생성 완료 메시지 발송
-                                foreach (string user in reqBody.users)
+                                foreach (int user in reqBody.users)
                                 {
-                                    SendMessageClient(resMsg, user);
+                                    SendMessageClient(resMsg, userList[user]);
                                 }
                             }
                             // 공개 채팅방
@@ -928,10 +991,15 @@ namespace TestServer
                             // 채팅방 회원 번호 검색, 채팅방 회원 추가
                             int usersInRoomNo = 0;
                             int userNo = 0;
-                            string msg = reqBody.roomNo + "&";
-                            foreach (string user in reqBody.invitedUsers)
+
+                            Room room = new Room()
                             {
-                                userNo = SearchUserNoByUserID(user);
+                                No = reqBody.roomNo
+                            };
+                            List<Relation> relations = new List<Relation>();
+                            foreach (int user in reqBody.invitedUsers)
+                            {
+                                userNo = user;
                                 using (MySqlConnection conn = new MySqlConnection(connStr))
                                 {
                                     conn.Open();
@@ -943,15 +1011,23 @@ namespace TestServer
                                 }
                                 // usersInRoom 추가
                                 usersInRoom.Add(usersInRoomNo, new Tuple<int, int, int>(reqBody.roomNo, userNo, 0));
-                                msg = msg + usersInRoomNo + "^" + userNo + "^^";
+
+                                
+                                Relation relation = new Relation()
+                                {
+                                    No = usersInRoomNo,
+                                    UserNo = userNo
+                                };
+                                relations.Add(relation);
                                 // 채팅방 초대 로그 기록
                                 log.Info(string.Format("{0}님이 {1}번 {2}채팅방에 초대됨", user, reqBody.roomNo, roomList[reqBody.roomNo].Item2));
                             }
+                            room.Relation = relations;
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseInvitationSuccess()
                             {
-                                msg = msg
+                                msg = JsonConvert.SerializeObject(room)
                             };
                             resMsg.Header = new Header()
                             {
@@ -980,7 +1056,7 @@ namespace TestServer
 
                             // 회원 번호 검색
                             int userNo = 0;
-                            userNo = SearchUserNoByUserID(reqBody.userID);
+                            userNo = reqBody.userNo;
 
                             // DB 변경
                             using (MySqlConnection conn = new MySqlConnection(connStr))
@@ -1005,12 +1081,39 @@ namespace TestServer
                             usersInRoom.Remove(usersInRoomNo);
 
                             // 채팅방 나가기 로그 기록
-                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 나감", reqBody.userID, reqBody.roomNo, roomList[reqBody.roomNo].Item2));
+                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 나감", userList[reqBody.userNo], reqBody.roomNo, roomList[reqBody.roomNo].Item2));
+
+
+                            // 채팅방에 남은 회원이 없으면
+                            IEnumerable<KeyValuePair<int, Tuple<int, int, int>>> tmp =
+                                from usersInRoom in usersInRoom
+                                where usersInRoom.Value.Item1.Equals(reqBody.roomNo)
+                                select usersInRoom;
+
+                            if (tmp.Count() == 0)
+                            {
+                                using (MySqlConnection conn = new MySqlConnection(connStr))
+                                {
+                                    conn.Open();
+                                    string sql = string.Format("delete from roomList where No = {0}", reqBody.roomNo);
+
+                                    MySqlCommand cmd = new MySqlCommand(sql, conn);
+                                    cmd.ExecuteNonQuery();
+                                }
+                                log.Info(string.Format("{0}번 {1}채팅방이 제거됨", reqBody.roomNo, roomList[reqBody.roomNo].Item2));
+                                roomList.Remove(reqBody.roomNo);
+                            }
+
+                            Relation relation = new Relation()
+                            {
+                                RoomNo = reqBody.roomNo,
+                                UserNo = reqBody.userNo
+                            };
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseLeaveRoomSuccess()
                             {
-                                msg = reqBody.roomNo + "&" + reqBody.userID
+                                msg = JsonConvert.SerializeObject(relation)
                             };
                             resMsg.Header = new Header()
                             {
@@ -1023,7 +1126,7 @@ namespace TestServer
                             };
 
                             // 나간 사람에게 송출
-                            SendMessageClient(resMsg, reqBody.userID);
+                            SendMessageClient(resMsg, userList[reqBody.userNo]);
 
                             // room에 속한 모든 사용자에게 송출
                             foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
@@ -1044,7 +1147,7 @@ namespace TestServer
                             int usersInRoomNo = 0;
 
                             // 추방될 회원 번호 검색
-                            banishedUserNo = SearchUserNoByUserID(reqBody.banishedUser);
+                            banishedUserNo = reqBody.banishedUserNo;
                             // DB 변경
                             using (MySqlConnection conn = new MySqlConnection(connStr))
                             {
@@ -1065,12 +1168,19 @@ namespace TestServer
                             }
                             usersInRoom.Remove(usersInRoomNo);
                             // 로그 기록
-                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 추방됨", reqBody.banishedUser, reqBody.roomNo, roomList[reqBody.roomNo].Item2));
+                            log.Info(string.Format("{0}님이 {1}번 {2}채팅방에서 추방됨", userList[reqBody.banishedUserNo], reqBody.roomNo, roomList[reqBody.roomNo].Item2));
+
+                            Relation relation = new Relation()
+                            {
+                                RoomNo = reqBody.roomNo,
+                                UserNo = reqBody.banishedUserNo
+                            };
+
                             // 채팅방 회원들에게 송출
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseLeaveRoomSuccess()
                             {
-                                msg = reqBody.roomNo + "&" + reqBody.banishedUser
+                                msg = JsonConvert.SerializeObject(relation)
                             };
                             resMsg.Header = new Header()
                             {
@@ -1083,7 +1193,7 @@ namespace TestServer
                             };
 
                             // 추방된 사람에게 송출
-                            SendMessageClient(resMsg, reqBody.banishedUser);
+                            SendMessageClient(resMsg, userList[reqBody.banishedUserNo]);
 
                             // room에 속한 모든 사용자에게 송출
                             foreach (KeyValuePair<int, Tuple<int, int, int>> temp in usersInRoom)
@@ -1129,7 +1239,7 @@ namespace TestServer
                             // accessRight 변경
                             else if (!reqBody.roomName.Equals(roomList[reqBody.roomNo].Item1))
                             {
-                                log.Info(string.Format("{0}번 채팅방의 공개 여부가 {1} 변경됨", reqBody.roomNo, accessRightToString));
+                                log.Info(string.Format("{0}번 채팅방의 공개 여부가 {1}로 변경됨", reqBody.roomNo, accessRightToString));
                             }
                             // roomName 변경
                             else if (!reqBody.roomName.Equals(roomList[reqBody.roomNo].Item2))
@@ -1254,12 +1364,24 @@ namespace TestServer
                         {
                             RequestSendFile reqBody = (RequestSendFile)message.Body;
 
-                            string msg = message.Header.MSGID + "&" + reqBody.roomNo + "&" + reqBody.filePath + "&" + reqBody.userID;
+                            Relation relation = new Relation()
+                            {
+                                RoomNo = reqBody.roomNo,
+                                UserNo = reqBody.userNo
+                            };
+                            MyMessageProtocol.File file1 = new MyMessageProtocol.File()
+                            {
+                                No = message.Header.MSGID,
+                                Path = reqBody.filePath,
+                                Relation = relation
+                            };
+
+                            string msg = message.Header.MSGID + "&" + reqBody.roomNo + "&" + reqBody.filePath + "&" + reqBody.userNo;
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseSendFile()
                             {
-                                msg = msg
+                                msg = JsonConvert.SerializeObject(file1)
                                 // MSGID = message.Header.MSGID,
                                 // RESPONSE = CONSTANTS.ACCEPTED,
                                 // filePath = reqBody.filePath
@@ -1274,7 +1396,7 @@ namespace TestServer
                                 SEQ = 0
                             };
 
-                            SendMessageClient(resMsg, reqBody.userID);
+                            SendMessageClient(resMsg, userList[reqBody.userNo]);
 
                             long fileSize = reqBody.FILESIZE;
                             string fileName = reqBody.FILENAME;
@@ -1336,15 +1458,21 @@ namespace TestServer
                                 LASTMSG = CONSTANTS.LASTMSG,
                                 SEQ = 0
                             };
-                            SendMessageClient(resMsg, reqBody.userID);
+                            SendMessageClient(resMsg, userList[reqBody.userNo]);
 
 
                             string filePath = dir + "\\" + fileName;
-
+                            MyMessageProtocol.File file2 = new MyMessageProtocol.File()
+                            {
+                                Size = fileSize,
+                                Name = fileName,
+                                Path = filePath,
+                                Relation = relation
+                            };
                             PacketMessage reqMsg = new PacketMessage();
                             reqMsg.Body = new RequestSendFile()
                             {
-                                msg = reqBody.roomNo + "&" + reqBody.userID + "&" + fileSize + "&" + fileName + "&" + filePath
+                                msg = JsonConvert.SerializeObject(file2)
                             };
                             reqMsg.Header = new Header()
                             {
@@ -1401,7 +1529,7 @@ namespace TestServer
                                     };
 
                                     // 모든 파일의 내용이 전송될 때까지 파일 스트림을 0x03 메시지에 담아 클라이언트로 보냄
-                                    SendMessageClient(fileMsg, resBody.userID);
+                                    SendMessageClient(fileMsg, userList[resBody.userNo]);
                                 }
                             }
                             handleClient.autoEvent.Set();

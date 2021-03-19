@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace MyMessageProtocol
 {
@@ -16,10 +17,9 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            userID = temp[0];
-            userPW = temp[1];
+            User user = JsonConvert.DeserializeObject<User>(msg);
+            userID = user.UserID;
+            userPW = user.UserPW;
         }
 
         public byte[] GetBytes()
@@ -48,10 +48,10 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            No = int.Parse(temp[0]);
-            userID = temp[1];
+            User user = JsonConvert.DeserializeObject<User>(msg);
+
+            No = user.No;
+            userID = user.UserID;
         }
 
         public byte[] GetBytes()
@@ -80,14 +80,10 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            userID = temp[0];
-            userPW = temp[1];
-            /*
-            userID = msg.Substring(0, msg.LastIndexOf("&"));
-            userPW = msg.Substring(msg.LastIndexOf("&"));
-            */
+            User user = JsonConvert.DeserializeObject<User>(msg);
+
+            userID = user.UserID;
+            userPW = user.UserPW;
         }
 
         public byte[] GetBytes()
@@ -184,6 +180,7 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public Dictionary<int, string> userList = new Dictionary<int, string>();
+        private List<User> users = new List<User>();
 
         public ResponseUserList() { }
         public ResponseUserList(byte[] bytes)
@@ -192,14 +189,14 @@ namespace MyMessageProtocol
             {
                 msg = Encoding.Unicode.GetString(bytes);
 
-                string[] delimiterChars = { "&" };
-                List<string> users = new List<string>(msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
+                users = JsonConvert.DeserializeObject<List<User>>(msg);
 
-                string[] chars = { "^" };
-                foreach(string user in users)
+                foreach(User user in users)
                 {
-                    List<string> temp = new List<string>(user.Split(chars, StringSplitOptions.RemoveEmptyEntries));
-                    userList.Add(int.Parse(temp[0]), temp[1]);
+                    if (!userList.ContainsKey(user.No))
+                    {
+                        userList.Add(user.No, user.UserID);
+                    }
                 }
             }
         }
@@ -249,37 +246,32 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public Dictionary<int, Tuple<int, string>> roomList = new Dictionary<int, Tuple<int, string>>();
         public Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
+        private List<Room> rooms = new List<Room>();
 
         public ResponseRoomList() { }
         public ResponseRoomList(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "*" };
-            string[] room = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+            rooms = JsonConvert.DeserializeObject<List<Room>>(msg);
             
-            foreach(string temp in room)
+            foreach(Room room in rooms)
             {
-                string[] chars = { "&" };
-                string[] roomInfo = temp.Split(chars, StringSplitOptions.RemoveEmptyEntries);
-
                 // roomNo, Tuple(accessRight, roomName)
-                roomList.Add(int.Parse(roomInfo[0]), new Tuple<int, string>(int.Parse(roomInfo[1]), roomInfo[2]));
-                
-                if (roomInfo.Length == 4)
+                if (!roomList.ContainsKey(room.No))
                 {
-                    string tempUsers = roomInfo[3];
-
-                    string[] cuttingChars = { "^^" };
-                    string[] roomUsers = tempUsers.Split(cuttingChars, StringSplitOptions.RemoveEmptyEntries);
-
-                    foreach (string user in roomUsers)
+                    roomList.Add(room.No, new Tuple<int, string>(room.AccessRight, room.Name));
+                }
+                
+                if (room.Relation != null)
+                {
+                    foreach (Relation relation in room.Relation)
                     {
-                        string[] splitChars = { "^" };
-                        string[] userInfo = user.Split(splitChars, StringSplitOptions.RemoveEmptyEntries);
-
                         // usersInRoomNo, Tuple(roomNo, userNo, managerRight)
-                        usersInRoom.Add(int.Parse(userInfo[0]), new Tuple<int, int, int>(int.Parse(roomInfo[0]), int.Parse(userInfo[1]), int.Parse(userInfo[2])));
+                        if (!usersInRoom.ContainsKey(relation.No))
+                        {
+                            usersInRoom.Add(relation.No, new Tuple<int, int, int>(room.No, relation.UserNo, relation.ManagerRight));
+                        }
                     }
                 }
             }
@@ -304,6 +296,7 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public List<string> onlineUserList = new List<string>();
+        private List<User> onlineUsers = new List<User>();
 
         public ResponseOnlineUserList() { }
         public ResponseOnlineUserList(byte[] bytes)
@@ -312,12 +305,14 @@ namespace MyMessageProtocol
             {
                 msg = Encoding.Unicode.GetString(bytes);
 
-                string[] delimiterChars = { "&" };
-                string[] onlineUserInfo = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
+                onlineUsers = JsonConvert.DeserializeObject<List<User>>(msg);
 
-                foreach (string temp in onlineUserInfo)
+                foreach (User onlineUser in onlineUsers)
                 {
-                    onlineUserList.Add(temp);
+                    if (!onlineUserList.Contains(onlineUser.UserID))
+                    {
+                        onlineUserList.Add(onlineUser.UserID);
+                    }
                 }
             }
         }
@@ -342,23 +337,26 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int accessRight = 0;
         public string roomName = string.Empty;
-        public string creator = string.Empty;
-        public List<string> users = new List<string>();
+        public int creatorNo = 0;
+        public List<int> users = new List<int>();
 
         public RequestCreateRoom() { }
         public RequestCreateRoom(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            accessRight = int.Parse(temp[0]);
-            roomName = temp[1];
-            creator = temp[2];
-            string tempUsers = temp[3];
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
 
-            string[] chars = { ", " };
-            users = new List<string>(tempUsers.Split(chars, StringSplitOptions.RemoveEmptyEntries));
+            accessRight = room.AccessRight;
+            roomName = room.Name;
+            creatorNo = room.Relation[0].UserNo;
+            foreach(Relation relation in room.Relation)
+            {
+                if (relation.UserNo != creatorNo)
+                {
+                    users.Add(relation.UserNo);
+                }
+            }
         }
 
         public byte[] GetBytes()
@@ -389,21 +387,15 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            accessRight = int.Parse(temp[1]);
-            roomName = temp[2];
-            string tempUsers = temp[3];
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
 
-            string[] chars = { "^^" };
-            string[] userInfos = tempUsers.Split(chars, StringSplitOptions.RemoveEmptyEntries);
+            roomNo = room.No;
+            accessRight = room.AccessRight;
+            roomName = room.Name;
 
-            foreach(string userInfo in userInfos)
+            foreach(Relation relation in room.Relation)
             {
-                string[] cutChars = { "^" };
-                string[] tmp = userInfo.Split(cutChars, StringSplitOptions.RemoveEmptyEntries);
-                usersInRoom.Add(int.Parse(tmp[0]), new Tuple<int, int, int>(roomNo, int.Parse(tmp[1]), int.Parse(tmp[2])));
+                usersInRoom.Add(relation.No, new Tuple<int, int, int>(roomNo, relation.UserNo, relation.ManagerRight));
             }
         }
 
@@ -490,18 +482,20 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public List<string> invitedUsers = new List<string>();
+        public List<int> invitedUsers = new List<int>();
 
         public RequestInvitation() { }
         public RequestInvitation(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            string[] chars = { ", " };
-            invitedUsers = new List<string>(temp[1].Split(chars, StringSplitOptions.RemoveEmptyEntries));
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
+
+            roomNo = room.No;
+            foreach (Relation relation in room.Relation)
+            {
+                invitedUsers.Add(relation.UserNo);
+            }
         }
 
         public byte[] GetBytes()
@@ -530,17 +524,13 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            string[] chars = { "^^" };
-            string[] invitedUsers = temp[1].Split(chars, StringSplitOptions.RemoveEmptyEntries);
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
 
-            foreach(string tmp in invitedUsers)
+            roomNo = room.No;
+
+            foreach(Relation relation in room.Relation)
             {
-                string[] cutChars = { "^" };
-                string[] userInfo = tmp.Split(cutChars, StringSplitOptions.RemoveEmptyEntries);
-                usersInRoom.Add(int.Parse(userInfo[0]), new Tuple<int, int, int>(roomNo, int.Parse(userInfo[1]), 0));
+                usersInRoom.Add(relation.No, new Tuple<int, int, int>(roomNo, relation.UserNo, 0));
             }
         }
 
@@ -563,17 +553,17 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string userID = string.Empty;
+        public int userNo = 0;
 
         public RequestLeaveRoom() { }
         public RequestLeaveRoom(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            userID = temp[1];
+            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+
+            roomNo = relation.RoomNo;
+            userNo = relation.UserNo;
         }
 
         public byte[] GetBytes()
@@ -595,17 +585,17 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string userID = string.Empty;
+        public int userNo = 0;
 
         public ResponseLeaveRoomSuccess() { }
         public ResponseLeaveRoomSuccess(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            userID = temp[1];
+            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+
+            roomNo = relation.RoomNo;
+            userNo = relation.UserNo;
         }
 
         public byte[] GetBytes()
@@ -627,17 +617,17 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string banishedUser = string.Empty;
+        public int banishedUserNo = 0;
 
         public RequestBanishUser() { }
         public RequestBanishUser(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            banishedUser = temp[1];
+            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+
+            roomNo = relation.RoomNo;
+            banishedUserNo = relation.UserNo;
         }
 
         public byte[] GetBytes()
@@ -659,17 +649,17 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string banishedUser = string.Empty;
+        public int banishedUserNo = 0;
 
         public ResponseBanishUserSuccess() { }
         public ResponseBanishUserSuccess(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            banishedUser = temp[1];
+            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+
+            roomNo = relation.RoomNo;
+            banishedUserNo = relation.UserNo;
         }
 
         public byte[] GetBytes()
@@ -699,11 +689,11 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            accessRight = int.Parse(temp[1]);
-            roomName = temp[2];
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
+
+            roomNo = room.No;
+            accessRight = room.AccessRight;
+            roomName = room.Name;
         }
 
         public byte[] GetBytes()
@@ -733,11 +723,11 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            accessRight = int.Parse(temp[1]);
-            roomName = temp[2];
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
+
+            roomNo = room.No;
+            accessRight = room.AccessRight;
+            roomName = room.Name;
         }
 
         public byte[] GetBytes()
@@ -766,16 +756,13 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            string users = temp[1];
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
 
-            string[] chars = { "^" };
-            string[] usersNo = users.Split(chars, StringSplitOptions.RemoveEmptyEntries);
-            foreach(string userNo in usersNo)
+            roomNo = room.No;
+            
+            foreach(Relation relation in room.Relation)
             {
-                changedUsersNo.Add(int.Parse(userNo));
+                changedUsersNo.Add(relation.UserNo);
             }
         }
 
@@ -805,16 +792,13 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            string users = temp[1];
+            Room room = JsonConvert.DeserializeObject<Room>(msg);
 
-            string[] chars = { "^" };
-            string[] usersNo = users.Split(chars, StringSplitOptions.RemoveEmptyEntries);
-            foreach (string userNo in usersNo)
+            roomNo = room.No;
+
+            foreach (Relation relation in room.Relation)
             {
-                changedUsersNo.Add(int.Parse(userNo));
+                changedUsersNo.Add(relation.UserNo);
             }
         }
 
@@ -837,7 +821,7 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string userID = string.Empty;
+        public int userNo = 0;
         public long FILESIZE = 0;
         public string FILENAME = string.Empty;
         public string filePath = string.Empty;
@@ -847,13 +831,13 @@ namespace MyMessageProtocol
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            userID = temp[1];
-            FILESIZE = long.Parse(temp[2]);
-            FILENAME = temp[3];
-            filePath = temp[4];
+            File file = JsonConvert.DeserializeObject<File>(msg);
+
+            roomNo = file.Relation.RoomNo;
+            userNo = file.Relation.UserNo;
+            FILESIZE = file.Size;
+            FILENAME = file.Name;
+            filePath = file.Path;
         }
 
         public byte[] GetBytes()
@@ -876,19 +860,19 @@ namespace MyMessageProtocol
         public uint MSGID = 0;
         public int roomNo = 0;
         public string filePath = string.Empty;
-        public string userID = string.Empty;
+        public int userNo = 0;
 
         public ResponseSendFile() { }
         public ResponseSendFile(byte[] bytes)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            MSGID = uint.Parse(temp[0]);
-            roomNo = int.Parse(temp[1]);
-            filePath = temp[2];
-            userID = temp[3];
+            File file = JsonConvert.DeserializeObject<File>(msg);
+
+            MSGID = file.No;
+            roomNo = file.Relation.RoomNo;
+            filePath = file.Path;
+            userNo = file.Relation.UserNo;
         }
 
         public byte[] GetBytes()
