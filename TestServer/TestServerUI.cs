@@ -474,10 +474,19 @@ namespace TestServer
                                     UserID = reqBody.userID
                                 };
 
+                                string serialized = string.Empty;
+                                serialized = JsonConvert.SerializeObject(user);
+
+                                byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                                byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_REGISTER_SUCCESS.ToString());
+
+                                string encrypted = string.Empty;
+                                encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                                 PacketMessage resMsg = new PacketMessage();
                                 resMsg.Body = new ResponseRegisterSuccess()
                                 {
-                                    msg = JsonConvert.SerializeObject(user)
+                                    msg = encrypted
                                 };
                                 resMsg.Header = new Header()
                                 {
@@ -564,11 +573,17 @@ namespace TestServer
                                         // 온라인 사용자 목록에 추가
                                         clientList.Add(reqBody.userID, client);
 
+                                        byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                                        byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_SIGNIN_SUCCESS.ToString());
+
+                                        string encrypted = string.Empty;
+                                        encrypted = Cryption.EncryptString_Aes(reqBody.userID, Key, IV);
+
                                         // 로그인 완료 메시지 작성 & 발송
                                         PacketMessage resMsg = new PacketMessage();
                                         resMsg.Body = new ResponseSignInSuccess()
                                         {
-                                            userID = reqBody.userID
+                                            userID = encrypted
                                         };
                                         resMsg.Header = new Header()
                                         {
@@ -636,11 +651,17 @@ namespace TestServer
                             // 로그아웃 로그 기록
                             log.Info(string.Format("{0}님이 로그아웃", reqBody.userID));
 
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_SIGNOUT_SUCCESS.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(reqBody.userID, Key, IV);
+
                             // 다른 회원에게도 알림
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseSignOutSuccess()
                             {
-                                userID = reqBody.userID
+                                userID = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -677,10 +698,19 @@ namespace TestServer
                                 users.Add(user);
                             }
 
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(users);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_USERLIST.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseUserList()
                             {
-                                msg = JsonConvert.SerializeObject(users)
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -770,12 +800,19 @@ namespace TestServer
                                 }
                             }
 
-                            msg = JsonConvert.SerializeObject(rooms);
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(rooms);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_ROOMLIST.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
 
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseRoomList()
                             {
-                                msg = msg
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -803,10 +840,19 @@ namespace TestServer
                                 users.Add(user);
                             }
 
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(users);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_ONLINE_USERLIST.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseOnlineUserList()
                             {
-                                msg = JsonConvert.SerializeObject(users)
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -903,10 +949,19 @@ namespace TestServer
                             }
                             room.Relation = relations;
 
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(room);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_CREATE_ROOM_SUCCESS.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseCreateRoomSuccess()
                             {
-                                msg = JsonConvert.SerializeObject(room)
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -944,10 +999,26 @@ namespace TestServer
                         {
                             RequestChat reqBody = (RequestChat)message.Body;
 
+                            Chat chat = new Chat()
+                            {
+                                RoomNo = reqBody.roomNo,
+                                UserID = reqBody.userID,
+                                ChatMsg = reqBody.chatMsg
+                            };
+
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(chat);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_CHAT.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseChat()
                             {
-                                msg = reqBody.msg
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -1024,10 +1095,19 @@ namespace TestServer
                             }
                             room.Relation = relations;
 
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(room);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_INVITATION_SUCCESS.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseInvitationSuccess()
                             {
-                                msg = JsonConvert.SerializeObject(room)
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -1110,10 +1190,19 @@ namespace TestServer
                                 UserNo = reqBody.userNo
                             };
 
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(relation);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_LEAVE_ROOM_SUCCESS.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseLeaveRoomSuccess()
                             {
-                                msg = JsonConvert.SerializeObject(relation)
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -1176,11 +1265,20 @@ namespace TestServer
                                 UserNo = reqBody.banishedUserNo
                             };
 
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(relation);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_BANISH_USER_SUCCESS.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             // 채팅방 회원들에게 송출
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseLeaveRoomSuccess()
                             {
-                                msg = JsonConvert.SerializeObject(relation)
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -1249,10 +1347,26 @@ namespace TestServer
                             // roomList 변경
                             roomList[reqBody.roomNo] = new Tuple<int, string>(reqBody.accessRight, reqBody.roomName);
 
+                            Room room = new Room()
+                            {
+                                No = reqBody.roomNo,
+                                AccessRight = reqBody.accessRight,
+                                Name = reqBody.roomName
+                            };
+
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(room);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_CHANGE_ROOM_CONFIG_SUCCESS.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseChangeRoomConfigSuccess()
                             {
-                                msg = reqBody.msg
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -1334,10 +1448,34 @@ namespace TestServer
                                 usersInRoom[tempKey[i]] = new Tuple<int, int, int>(tempRoomNo[i], tempUserNo[i], tempRight[i]);
                             }
 
+                            Room room = new Room()
+                            {
+                                No = reqBody.roomNo,
+                            };
+                            List<Relation> relations = new List<Relation>();
+                            foreach (int temp in reqBody.changedUsersNo)
+                            {
+                                Relation relation = new Relation()
+                                {
+                                    UserNo = temp
+                                };
+                                relations.Add(relation);
+                            }
+                            room.Relation = relations;
+
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(room);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_CHANGE_MANAGEMENT_RIGHTS_SUCCESS.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseChangeManagementRightsSuccess()
                             {
-                                msg = reqBody.msg
+                                msg = encrypted
                             };
                             resMsg.Header = new Header()
                             {
@@ -1378,10 +1516,19 @@ namespace TestServer
 
                             string msg = message.Header.MSGID + "&" + reqBody.roomNo + "&" + reqBody.filePath + "&" + reqBody.userNo;
 
+                            string serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(file1);
+
+                            byte[] Key = Cryption.KeyGenerator(msgid.ToString());
+                            byte[] IV = Cryption.IVGenerator(CONSTANTS.RES_SEND_FILE.ToString());
+
+                            string encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage resMsg = new PacketMessage();
                             resMsg.Body = new ResponseSendFile()
                             {
-                                msg = JsonConvert.SerializeObject(file1)
+                                msg = encrypted
                                 // MSGID = message.Header.MSGID,
                                 // RESPONSE = CONSTANTS.ACCEPTED,
                                 // filePath = reqBody.filePath
@@ -1469,10 +1616,20 @@ namespace TestServer
                                 Path = filePath,
                                 Relation = relation
                             };
+
+                            serialized = string.Empty;
+                            serialized = JsonConvert.SerializeObject(file2);
+
+                            Key = Cryption.KeyGenerator(msgid.ToString());
+                            IV = Cryption.IVGenerator(CONSTANTS.REQ_SEND_FILE.ToString());
+
+                            encrypted = string.Empty;
+                            encrypted = Cryption.EncryptString_Aes(serialized, Key, IV);
+
                             PacketMessage reqMsg = new PacketMessage();
                             reqMsg.Body = new RequestSendFile()
                             {
-                                msg = JsonConvert.SerializeObject(file2)
+                                msg = encrypted
                             };
                             reqMsg.Header = new Header()
                             {
@@ -1544,83 +1701,6 @@ namespace TestServer
                             // 서버에서 파일을 제대로 받았는지에 대한 응답을 받음
                             ResponseFileSendComplete resBody = (ResponseFileSendComplete)message.Body;
                             Console.WriteLine("파일 전송 성공");
-                            break;
-                        }
-                    case CONSTANTS.SEND_FILE:
-                        {
-                            SendFile reqBody = (SendFile)message.Body;
-
-                            long fileSize = reqBody.FILESIZE;
-                            string fileName = reqBody.FILENAME;
-
-                            long pid = reqBody.pid;
-                            string userID = reqBody.userID;
-                            byte[] DATA = reqBody.DATA;
-
-                            string dir = System.Windows.Forms.Application.StartupPath + "\\file";
-                            if (Directory.Exists(dir) == false)
-                            {
-                                Directory.CreateDirectory(dir);
-                            }
-
-                            // 파일 스트림 생성
-                            FileStream file = new FileStream(dir + "\\" + fileName, FileMode.Append);
-
-                            Console.Write("#");
-
-                            file.Write(reqBody.DATA, 0, reqBody.DATA.Length);
-                            file.Close();
-
-
-                            if (message.Header.LASTMSG == CONSTANTS.LASTMSG)
-                            {
-                                using (Stream fileStream = new FileStream(dir + "\\" + fileName, FileMode.Open))
-                                {
-                                    byte[] rbytes = new byte[CHUNK_SIZE];
-
-                                    long readValue = BitConverter.ToInt64(rbytes, 0);
-
-                                    int totalRead = 0;
-                                    ushort msgSeq = 0;
-                                    byte fragmented = (fileStream.Length < CHUNK_SIZE) ? CONSTANTS.NOT_FRAGMENTED : CONSTANTS.FRAGMENT;
-
-                                    while (totalRead < fileStream.Length)
-                                    {
-                                        int read = fileStream.Read(rbytes, 0, CHUNK_SIZE);
-                                        totalRead += read;
-                                        PacketMessage fileMsg = new PacketMessage();
-
-                                        byte[] sendBytes = new byte[read];
-                                        Array.Copy(rbytes, 0, sendBytes, 0, read);
-
-                                        fileMsg.Body = new SendFile()
-                                        {
-                                            msg = pid + "&^%$#&^%$&^%$" + userID + "&^%$#&^%$&^%$" + fileName + "&^%$#&^%$&^%$" + fileSize + "&^%$#&^%$&^%$" + Encoding.Unicode.GetString(sendBytes)
-                                        };
-                                        fileMsg.Header = new Header()
-                                        {
-                                            MSGID = msgid,
-                                            MSGTYPE = CONSTANTS.SEND_FILE,
-                                            BODYLEN = (uint)fileMsg.Body.GetSize(),
-                                            FRAGMENTED = fragmented,
-                                            LASTMSG = (totalRead < fileStream.Length) ? CONSTANTS.NOT_LASTMSG : CONSTANTS.LASTMSG,
-                                            SEQ = msgSeq++
-                                        };
-
-                                        /*
-                                        string[] delimiterChars = { ", " };
-                                        List<string> users = new List<string>(roomList[pid].Item2.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries));
-
-                                        foreach (string user in users)
-                                        {
-                                            SendMessageClient(fileMsg, user);
-                                        }
-                                        */
-                                    }
-                                }
-                            }
-
-
                             break;
                         }
                     default:

@@ -55,91 +55,88 @@ namespace MyMessageProtocol
             switch (header.MSGTYPE)
             {
                 case CONSTANTS.REQ_REGISTER:
-                    body = new RequestRegister(bBuffer);
+                    body = new RequestRegister(bBuffer, header);
                     break;
                 case CONSTANTS.RES_REGISTER_SUCCESS:
-                    body = new ResponseRegisterSuccess(bBuffer);
+                    body = new ResponseRegisterSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_SIGNIN:
-                    body = new RequestSignIn(bBuffer);
+                    body = new RequestSignIn(bBuffer, header);
                     break;
                 case CONSTANTS.RES_SIGNIN_SUCCESS:
-                    body = new ResponseSignInSuccess(bBuffer);
+                    body = new ResponseSignInSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_SIGNOUT:
-                    body = new RequestSignOut(bBuffer);
+                    body = new RequestSignOut(bBuffer, header);
                     break;
                 case CONSTANTS.RES_SIGNOUT_SUCCESS:
-                    body = new ResponseSignOutSuccess(bBuffer);
+                    body = new ResponseSignOutSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.RES_USERLIST:
-                    body = new ResponseUserList(bBuffer);
+                    body = new ResponseUserList(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_ROOMLIST:
-                    body = new RequestRoomList(bBuffer);
+                    body = new RequestRoomList(bBuffer, header);
                     break;
                 case CONSTANTS.RES_ROOMLIST:
-                    body = new ResponseRoomList(bBuffer);
+                    body = new ResponseRoomList(bBuffer, header);
                     break;
                 case CONSTANTS.RES_ONLINE_USERLIST:
-                    body = new ResponseOnlineUserList(bBuffer);
+                    body = new ResponseOnlineUserList(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_CREATE_ROOM:
-                    body = new RequestCreateRoom(bBuffer);
+                    body = new RequestCreateRoom(bBuffer, header);
                     break;
                 case CONSTANTS.RES_CREATE_ROOM_SUCCESS:
-                    body = new ResponseCreateRoomSuccess(bBuffer);
+                    body = new ResponseCreateRoomSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_CHAT:
-                    body = new RequestChat(bBuffer);
+                    body = new RequestChat(bBuffer, header);
                     break;
                 case CONSTANTS.RES_CHAT:
-                    body = new ResponseChat(bBuffer);
+                    body = new ResponseChat(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_INVITATION:
-                    body = new RequestInvitation(bBuffer);
+                    body = new RequestInvitation(bBuffer, header);
                     break;
                 case CONSTANTS.RES_INVITATION_SUCCESS:
-                    body = new ResponseInvitationSuccess(bBuffer);
+                    body = new ResponseInvitationSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_LEAVE_ROOM:
-                    body = new RequestLeaveRoom(bBuffer);
+                    body = new RequestLeaveRoom(bBuffer, header);
                     break;
                 case CONSTANTS.RES_LEAVE_ROOM_SUCCESS:
-                    body = new ResponseLeaveRoomSuccess(bBuffer);
+                    body = new ResponseLeaveRoomSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_BANISH_USER:
-                    body = new RequestBanishUser(bBuffer);
+                    body = new RequestBanishUser(bBuffer, header);
                     break;
                 case CONSTANTS.RES_BANISH_USER_SUCCESS:
-                    body = new ResponseBanishUserSuccess(bBuffer);
+                    body = new ResponseBanishUserSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_CHANGE_ROOM_CONFIG:
-                    body = new RequestChangeRoomConfig(bBuffer);
+                    body = new RequestChangeRoomConfig(bBuffer, header);
                     break;
                 case CONSTANTS.RES_CHANGE_ROOM_CONFIG_SUCCESS:
-                    body = new ResponseChangeRoomConfigSuccess(bBuffer);
+                    body = new ResponseChangeRoomConfigSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_CHANGE_MANAGEMENT_RIGHTS:
-                    body = new RequestChangeManagementRights(bBuffer);
+                    body = new RequestChangeManagementRights(bBuffer, header);
                     break;
                 case CONSTANTS.RES_CHANGE_MANAGEMENT_RIGHTS_SUCCESS:
-                    body = new ResponseChangeManagementRightsSuccess(bBuffer);
+                    body = new ResponseChangeManagementRightsSuccess(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_SEND_FILE:
-                    body = new RequestSendFile(bBuffer);
+                    body = new RequestSendFile(bBuffer, header);
                     break;
                 case CONSTANTS.RES_SEND_FILE:
-                    body = new ResponseSendFile(bBuffer);
+                    body = new ResponseSendFile(bBuffer, header);
                     break;
                 case CONSTANTS.REQ_SEND_FILE_DATA:
                     body = new RequestSendFileData(bBuffer);
                     break;
                 case CONSTANTS.RES_FILE_SEND_COMPLETE:
-                    body = new ResponseFileSendComplete(bBuffer);
-                    break;
-                case CONSTANTS.SEND_FILE:
-                    body = new SendFile(bBuffer);
+                    body = new ResponseFileSendComplete(bBuffer, header);
                     break;
                 default:
                     // throw new Exception(String.Format("Unknown MSGTYPE: {0}" + header.MSGTYPE));

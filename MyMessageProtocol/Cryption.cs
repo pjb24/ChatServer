@@ -6,9 +6,9 @@ using System.IO;
 
 namespace MyMessageProtocol
 {
-    class Cryption
+    public class Cryption
     {
-        public string EncryptString_Aes(string plaintext, byte[] Key, byte[] IV)
+        public static string EncryptString_Aes(string plaintext, byte[] Key, byte[] IV)
         {
             // Check arguments.
             if (plaintext == null || plaintext.Length <= 0)
@@ -48,7 +48,7 @@ namespace MyMessageProtocol
             return Convert.ToBase64String(encrypted);
         }
 
-        public string DecryptString_Aes(string cipherText, byte[] Key, byte[] IV)
+        public static string DecryptString_Aes(string cipherText, byte[] Key, byte[] IV)
         {
             // Check arguments.
             if (cipherText == null || cipherText.Length <= 0)
@@ -91,7 +91,7 @@ namespace MyMessageProtocol
             return plaintext;
         }
 
-        public byte[] KeyGenerator(string arg)
+        public static byte[] KeyGenerator(string arg)
         {
             SHA256Managed sHA256Managed = new SHA256Managed();
             byte[] Key = new byte[32];
@@ -99,7 +99,7 @@ namespace MyMessageProtocol
             return Key;
         }
 
-        public byte[] IVGenerator(string arg)
+        public static byte[] IVGenerator(string arg)
         {
             SHA256Managed sHA256Managed = new SHA256Managed();
             byte[] IV = new byte[16];

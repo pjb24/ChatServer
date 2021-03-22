@@ -11,13 +11,20 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public string userID = string.Empty;
         public string userPW = string.Empty;
+        private string decrypted = string.Empty;
+        private User user = new User();
 
         public RequestRegister() { }
-        public RequestRegister(byte[] bytes)
+        public RequestRegister(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            User user = JsonConvert.DeserializeObject<User>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            user = JsonConvert.DeserializeObject<User>(decrypted);
             userID = user.UserID;
             userPW = user.UserPW;
         }
@@ -42,13 +49,20 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int No = 0;
         public string userID = string.Empty;
+        private string decrypted = string.Empty;
+        private User user = new User();
 
         public ResponseRegisterSuccess() { }
-        public ResponseRegisterSuccess(byte[] bytes)
+        public ResponseRegisterSuccess(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            User user = JsonConvert.DeserializeObject<User>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            user = JsonConvert.DeserializeObject<User>(decrypted);
 
             No = user.No;
             userID = user.UserID;
@@ -74,13 +88,20 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public string userID = string.Empty;
         public string userPW = string.Empty;
+        private string decrypted = string.Empty;
+        private User user = new User();
 
         public RequestSignIn() { }
-        public RequestSignIn(byte[] bytes)
+        public RequestSignIn(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            User user = JsonConvert.DeserializeObject<User>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            user = JsonConvert.DeserializeObject<User>(decrypted);
 
             userID = user.UserID;
             userPW = user.UserPW;
@@ -104,11 +125,17 @@ namespace MyMessageProtocol
     public class ResponseSignInSuccess : ISerializable
     {
         public string userID = string.Empty;
+        private string msg = string.Empty;
 
         public ResponseSignInSuccess() { }
-        public ResponseSignInSuccess(byte[] bytes)
+        public ResponseSignInSuccess(byte[] bytes, Header header)
         {
-            userID = Encoding.Unicode.GetString(bytes);
+            msg = Encoding.Unicode.GetString(bytes);
+
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            userID = Cryption.DecryptString_Aes(msg, Key, IV);
         }
 
         public byte[] GetBytes()
@@ -129,11 +156,17 @@ namespace MyMessageProtocol
     public class RequestSignOut : ISerializable
     {
         public string userID = string.Empty;
+        private string msg = string.Empty;
 
         public RequestSignOut() { }
-        public RequestSignOut(byte[] bytes)
+        public RequestSignOut(byte[] bytes, Header header)
         {
-            userID = Encoding.Unicode.GetString(bytes);
+            msg = Encoding.Unicode.GetString(bytes);
+
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            userID = Cryption.DecryptString_Aes(msg, Key, IV);
         }
 
         public byte[] GetBytes()
@@ -154,11 +187,17 @@ namespace MyMessageProtocol
     public class ResponseSignOutSuccess : ISerializable
     {
         public string userID = string.Empty;
+        private string msg = string.Empty;
 
         public ResponseSignOutSuccess() { }
-        public ResponseSignOutSuccess(byte[] bytes)
+        public ResponseSignOutSuccess(byte[] bytes, Header header)
         {
-            userID = Encoding.Unicode.GetString(bytes);
+            msg = Encoding.Unicode.GetString(bytes);
+
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            userID = Cryption.DecryptString_Aes(msg, Key, IV);
         }
 
         public byte[] GetBytes()
@@ -181,15 +220,21 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public Dictionary<int, string> userList = new Dictionary<int, string>();
         private List<User> users = new List<User>();
+        private string decrypted = string.Empty;
 
         public ResponseUserList() { }
-        public ResponseUserList(byte[] bytes)
+        public ResponseUserList(byte[] bytes, Header header)
         {
             if (bytes.Length != 0)
             {
                 msg = Encoding.Unicode.GetString(bytes);
 
-                users = JsonConvert.DeserializeObject<List<User>>(msg);
+                byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+                byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+                decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+                users = JsonConvert.DeserializeObject<List<User>>(decrypted);
 
                 foreach(User user in users)
                 {
@@ -219,11 +264,17 @@ namespace MyMessageProtocol
     public class RequestRoomList : ISerializable
     {
         public string userID = string.Empty;
+        private string msg = string.Empty;
 
         public RequestRoomList() { }
-        public RequestRoomList(byte[] bytes)
+        public RequestRoomList(byte[] bytes, Header header)
         {
-            userID = Encoding.Unicode.GetString(bytes);
+            msg = Encoding.Unicode.GetString(bytes);
+
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            userID = Cryption.DecryptString_Aes(msg, Key, IV);
         }
 
         public byte[] GetBytes()
@@ -247,13 +298,19 @@ namespace MyMessageProtocol
         public Dictionary<int, Tuple<int, string>> roomList = new Dictionary<int, Tuple<int, string>>();
         public Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
         private List<Room> rooms = new List<Room>();
+        private string decrypted = string.Empty;
 
         public ResponseRoomList() { }
-        public ResponseRoomList(byte[] bytes)
+        public ResponseRoomList(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            rooms = JsonConvert.DeserializeObject<List<Room>>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            rooms = JsonConvert.DeserializeObject<List<Room>>(decrypted);
             
             foreach(Room room in rooms)
             {
@@ -297,15 +354,21 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public List<string> onlineUserList = new List<string>();
         private List<User> onlineUsers = new List<User>();
+        private string decrypted = string.Empty;
 
         public ResponseOnlineUserList() { }
-        public ResponseOnlineUserList(byte[] bytes)
+        public ResponseOnlineUserList(byte[] bytes, Header header)
         {
             if (bytes.Length != 0)
             {
                 msg = Encoding.Unicode.GetString(bytes);
 
-                onlineUsers = JsonConvert.DeserializeObject<List<User>>(msg);
+                byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+                byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+                decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+                onlineUsers = JsonConvert.DeserializeObject<List<User>>(decrypted);
 
                 foreach (User onlineUser in onlineUsers)
                 {
@@ -339,13 +402,19 @@ namespace MyMessageProtocol
         public string roomName = string.Empty;
         public int creatorNo = 0;
         public List<int> users = new List<int>();
+        private string decrypted = string.Empty;
 
         public RequestCreateRoom() { }
-        public RequestCreateRoom(byte[] bytes)
+        public RequestCreateRoom(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             accessRight = room.AccessRight;
             roomName = room.Name;
@@ -381,13 +450,19 @@ namespace MyMessageProtocol
         public int accessRight = 0;
         public string roomName = string.Empty;
         public Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
+        private string decrypted = string.Empty;
 
         public ResponseCreateRoomSuccess() { }
-        public ResponseCreateRoomSuccess(byte[] bytes)
+        public ResponseCreateRoomSuccess(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             roomNo = room.No;
             accessRight = room.AccessRight;
@@ -418,17 +493,26 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string encrypted = string.Empty;
+        public string userID = string.Empty;
+        public string chatMsg = string.Empty;
+        private string decrypted = string.Empty;
+        private Chat chat = new Chat();
 
         public RequestChat() { }
-        public RequestChat(byte[] bytes)
+        public RequestChat(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            encrypted = temp[1];
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            chat = JsonConvert.DeserializeObject<Chat>(decrypted);
+
+            roomNo = chat.RoomNo;
+            userID = chat.UserID;
+            chatMsg = chat.ChatMsg;
         }
 
         public byte[] GetBytes()
@@ -450,17 +534,26 @@ namespace MyMessageProtocol
     {
         public string msg = string.Empty;
         public int roomNo = 0;
-        public string encrypted = string.Empty;
+        public string userID = string.Empty;
+        public string chatMsg = string.Empty;
+        private string decrypted = string.Empty;
+        private Chat chat = new Chat();
 
         public ResponseChat() { }
-        public ResponseChat(byte[] bytes)
+        public ResponseChat(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            string[] delimiterChars = { "&" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-            roomNo = int.Parse(temp[0]);
-            encrypted = temp[1];
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            chat = JsonConvert.DeserializeObject<Chat>(decrypted);
+
+            roomNo = chat.RoomNo;
+            userID = chat.UserID;
+            chatMsg = chat.ChatMsg;
         }
 
         public byte[] GetBytes()
@@ -483,13 +576,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public List<int> invitedUsers = new List<int>();
+        private string decrypted = string.Empty;
 
         public RequestInvitation() { }
-        public RequestInvitation(byte[] bytes)
+        public RequestInvitation(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             roomNo = room.No;
             foreach (Relation relation in room.Relation)
@@ -518,13 +617,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
+        private string decrypted = string.Empty;
 
         public ResponseInvitationSuccess() { }
-        public ResponseInvitationSuccess(byte[] bytes)
+        public ResponseInvitationSuccess(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             roomNo = room.No;
 
@@ -554,13 +659,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public int userNo = 0;
+        private string decrypted = string.Empty;
 
         public RequestLeaveRoom() { }
-        public RequestLeaveRoom(byte[] bytes)
+        public RequestLeaveRoom(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
 
             roomNo = relation.RoomNo;
             userNo = relation.UserNo;
@@ -586,13 +697,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public int userNo = 0;
+        private string decrypted = string.Empty;
 
         public ResponseLeaveRoomSuccess() { }
-        public ResponseLeaveRoomSuccess(byte[] bytes)
+        public ResponseLeaveRoomSuccess(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
 
             roomNo = relation.RoomNo;
             userNo = relation.UserNo;
@@ -618,13 +735,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public int banishedUserNo = 0;
+        private string decrypted = string.Empty;
 
         public RequestBanishUser() { }
-        public RequestBanishUser(byte[] bytes)
+        public RequestBanishUser(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
 
             roomNo = relation.RoomNo;
             banishedUserNo = relation.UserNo;
@@ -650,13 +773,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public int banishedUserNo = 0;
+        private string decrypted = string.Empty;
 
         public ResponseBanishUserSuccess() { }
-        public ResponseBanishUserSuccess(byte[] bytes)
+        public ResponseBanishUserSuccess(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
 
             roomNo = relation.RoomNo;
             banishedUserNo = relation.UserNo;
@@ -683,13 +812,19 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public int accessRight = 0;
         public string roomName = string.Empty;
+        private string decrypted = string.Empty;
 
         public RequestChangeRoomConfig() { }
-        public RequestChangeRoomConfig(byte[] bytes)
+        public RequestChangeRoomConfig(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             roomNo = room.No;
             accessRight = room.AccessRight;
@@ -717,13 +852,19 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public int accessRight = 0;
         public string roomName = string.Empty;
+        private string decrypted = string.Empty;
 
         public ResponseChangeRoomConfigSuccess() { }
-        public ResponseChangeRoomConfigSuccess(byte[] bytes)
+        public ResponseChangeRoomConfigSuccess(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             roomNo = room.No;
             accessRight = room.AccessRight;
@@ -750,13 +891,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public List<int> changedUsersNo = new List<int>();
+        private string decrypted = string.Empty;
 
         public RequestChangeManagementRights() { }
-        public RequestChangeManagementRights(byte[] bytes)
+        public RequestChangeManagementRights(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             roomNo = room.No;
             
@@ -786,13 +933,19 @@ namespace MyMessageProtocol
         public string msg = string.Empty;
         public int roomNo = 0;
         public List<int> changedUsersNo = new List<int>();
+        private string decrypted = string.Empty;
 
         public ResponseChangeManagementRightsSuccess() { }
-        public ResponseChangeManagementRightsSuccess(byte[] bytes)
+        public ResponseChangeManagementRightsSuccess(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            Room room = JsonConvert.DeserializeObject<Room>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
 
             roomNo = room.No;
 
@@ -825,13 +978,19 @@ namespace MyMessageProtocol
         public long FILESIZE = 0;
         public string FILENAME = string.Empty;
         public string filePath = string.Empty;
+        private string decrypted = string.Empty;
 
         public RequestSendFile() { }
-        public RequestSendFile(byte[] bytes)
+        public RequestSendFile(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            File file = JsonConvert.DeserializeObject<File>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            File file = JsonConvert.DeserializeObject<File>(decrypted);
 
             roomNo = file.Relation.RoomNo;
             userNo = file.Relation.UserNo;
@@ -861,13 +1020,19 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public string filePath = string.Empty;
         public int userNo = 0;
+        private string decrypted = string.Empty;
 
         public ResponseSendFile() { }
-        public ResponseSendFile(byte[] bytes)
+        public ResponseSendFile(byte[] bytes, Header header)
         {
             msg = Encoding.Unicode.GetString(bytes);
 
-            File file = JsonConvert.DeserializeObject<File>(msg);
+            byte[] Key = Cryption.KeyGenerator(header.MSGID.ToString());
+            byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
+
+            decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+
+            File file = JsonConvert.DeserializeObject<File>(decrypted);
 
             MSGID = file.No;
             roomNo = file.Relation.RoomNo;
@@ -919,7 +1084,7 @@ namespace MyMessageProtocol
         public byte RESULT;
 
         public ResponseFileSendComplete() { }
-        public ResponseFileSendComplete(byte[] bytes)
+        public ResponseFileSendComplete(byte[] bytes, Header header)
         {
             MSGID = BitConverter.ToUInt32(bytes, 0);
             RESULT = bytes[4];
@@ -938,44 +1103,6 @@ namespace MyMessageProtocol
         public int GetSize()
         {
             return sizeof(uint) + sizeof(byte);
-        }
-    }
-
-    public class SendFile : ISerializable
-    {
-        public string msg = string.Empty;
-        public long pid = 0;
-        public string userID = string.Empty;
-        public string FILENAME = string.Empty;
-        public long FILESIZE = 0;
-        public byte[] DATA;
-
-        public SendFile() { }
-        public SendFile(byte[] bytes)
-        {
-            msg = Encoding.Unicode.GetString(bytes);
-
-            string[] delimiterChars = { "&^%$#&^%$&^%$" };
-            string[] temp = msg.Split(delimiterChars, StringSplitOptions.RemoveEmptyEntries);
-
-            pid = long.Parse(temp[0]);
-            userID = temp[1];
-            FILENAME = temp[2];
-            FILESIZE = long.Parse(temp[3]);
-            DATA = Encoding.Unicode.GetBytes(temp[4]);
-        }
-
-        public byte[] GetBytes()
-        {
-            byte[] bytes = new byte[GetSize()];
-            bytes = Encoding.Unicode.GetBytes(msg);
-
-            return bytes;
-        }
-
-        public int GetSize()
-        {
-            return Encoding.Unicode.GetBytes(msg).Length;
         }
     }
 }
