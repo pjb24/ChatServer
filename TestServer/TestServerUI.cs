@@ -170,7 +170,7 @@ namespace TestServer
             }
 
             // TcpListener class 사용, 11000포트로 들어오는 모든 IP 요청을 받는다
-            server = new TcpListener(IP, port);
+            server = new TcpListener(IPAddress.Any, port);
             // 초기화
             clientSocket = default(TcpClient);
             // Listen start
