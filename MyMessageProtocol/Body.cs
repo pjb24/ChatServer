@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json;
 
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+
 namespace MyMessageProtocol
 {
     // 회원가입 요청 ID, PW
@@ -24,7 +27,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            user = deserializer.Deserialize<User>(decrypted);
+#endif
+#if JSON
             user = JsonConvert.DeserializeObject<User>(decrypted);
+#endif
+
             userID = user.UserID;
             userPW = user.UserPW;
         }
@@ -61,8 +73,15 @@ namespace MyMessageProtocol
             byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
-
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            user = deserializer.Deserialize<User>(decrypted);
+#endif
+#if JSON
             user = JsonConvert.DeserializeObject<User>(decrypted);
+#endif
 
             No = user.No;
             userID = user.UserID;
@@ -101,7 +120,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            user = deserializer.Deserialize<User>(decrypted);
+#endif
+
+#if JSON
             user = JsonConvert.DeserializeObject<User>(decrypted);
+#endif
 
             userID = user.UserID;
             userPW = user.UserPW;
@@ -234,9 +262,18 @@ namespace MyMessageProtocol
 
                 decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-                users = JsonConvert.DeserializeObject<List<User>>(decrypted);
+#if YAML
+                IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+                users = deserializer.Deserialize<List<User>>(decrypted);
+#endif
 
-                foreach(User user in users)
+#if JSON
+                users = JsonConvert.DeserializeObject<List<User>>(decrypted);
+#endif
+
+                foreach (User user in users)
                 {
                     if (!userList.ContainsKey(user.No))
                     {
@@ -310,9 +347,18 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            rooms = deserializer.Deserialize<List<Room>>(decrypted);
+#endif
+
+#if JSON
             rooms = JsonConvert.DeserializeObject<List<Room>>(decrypted);
-            
-            foreach(Room room in rooms)
+#endif
+
+            foreach (Room room in rooms)
             {
                 // roomNo, Tuple(accessRight, roomName)
                 if (!roomList.ContainsKey(room.No))
@@ -368,7 +414,16 @@ namespace MyMessageProtocol
 
                 decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
+#if YAML
+                IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+                onlineUsers = deserializer.Deserialize<List<User>>(decrypted);
+#endif
+
+#if JSON
                 onlineUsers = JsonConvert.DeserializeObject<List<User>>(decrypted);
+#endif
 
                 foreach (User onlineUser in onlineUsers)
                 {
@@ -403,6 +458,7 @@ namespace MyMessageProtocol
         public int creatorNo = 0;
         public List<int> users = new List<int>();
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public RequestCreateRoom() { }
         public RequestCreateRoom(byte[] bytes, Header header)
@@ -414,7 +470,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
+
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             accessRight = room.AccessRight;
             roomName = room.Name;
@@ -451,6 +516,7 @@ namespace MyMessageProtocol
         public string roomName = string.Empty;
         public Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public ResponseCreateRoomSuccess() { }
         public ResponseCreateRoomSuccess(byte[] bytes, Header header)
@@ -462,7 +528,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
+
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             roomNo = room.No;
             accessRight = room.AccessRight;
@@ -508,7 +583,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            chat = deserializer.Deserialize<Chat>(decrypted);
+#endif
+
+#if JSON
             chat = JsonConvert.DeserializeObject<Chat>(decrypted);
+#endif
 
             roomNo = chat.RoomNo;
             userID = chat.UserID;
@@ -549,7 +633,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            chat = deserializer.Deserialize<Chat>(decrypted);
+#endif
+
+#if JSON
             chat = JsonConvert.DeserializeObject<Chat>(decrypted);
+#endif
 
             roomNo = chat.RoomNo;
             userID = chat.UserID;
@@ -577,6 +670,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public List<int> invitedUsers = new List<int>();
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public RequestInvitation() { }
         public RequestInvitation(byte[] bytes, Header header)
@@ -587,8 +681,16 @@ namespace MyMessageProtocol
             byte[] IV = Cryption.IVGenerator(header.MSGTYPE.ToString());
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             roomNo = room.No;
             foreach (Relation relation in room.Relation)
@@ -618,6 +720,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public Dictionary<int, Tuple<int, int, int>> usersInRoom = new Dictionary<int, Tuple<int, int, int>>();
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public ResponseInvitationSuccess() { }
         public ResponseInvitationSuccess(byte[] bytes, Header header)
@@ -629,7 +732,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
+
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             roomNo = room.No;
 
@@ -660,6 +772,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public int userNo = 0;
         private string decrypted = string.Empty;
+        private Relation relation = new Relation();
 
         public RequestLeaveRoom() { }
         public RequestLeaveRoom(byte[] bytes, Header header)
@@ -671,7 +784,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            relation = deserializer.Deserialize<Relation>(decrypted);
+#endif
+
+#if JSON
+            relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#endif
 
             roomNo = relation.RoomNo;
             userNo = relation.UserNo;
@@ -698,6 +820,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public int userNo = 0;
         private string decrypted = string.Empty;
+        private Relation relation = new Relation();
 
         public ResponseLeaveRoomSuccess() { }
         public ResponseLeaveRoomSuccess(byte[] bytes, Header header)
@@ -709,7 +832,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            relation = deserializer.Deserialize<Relation>(decrypted);
+#endif
+
+#if JSON
+            relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#endif
 
             roomNo = relation.RoomNo;
             userNo = relation.UserNo;
@@ -736,6 +868,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public int banishedUserNo = 0;
         private string decrypted = string.Empty;
+        private Relation relation = new Relation();
 
         public RequestBanishUser() { }
         public RequestBanishUser(byte[] bytes, Header header)
@@ -747,7 +880,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            relation = deserializer.Deserialize<Relation>(decrypted);
+#endif
+
+#if JSON
+            relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#endif
 
             roomNo = relation.RoomNo;
             banishedUserNo = relation.UserNo;
@@ -774,6 +916,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public int banishedUserNo = 0;
         private string decrypted = string.Empty;
+        private Relation relation = new Relation();
 
         public ResponseBanishUserSuccess() { }
         public ResponseBanishUserSuccess(byte[] bytes, Header header)
@@ -785,7 +928,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Relation relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            relation = deserializer.Deserialize<Relation>(decrypted);
+#endif
+
+#if JSON
+            relation = JsonConvert.DeserializeObject<Relation>(decrypted);
+#endif
 
             roomNo = relation.RoomNo;
             banishedUserNo = relation.UserNo;
@@ -813,6 +965,7 @@ namespace MyMessageProtocol
         public int accessRight = 0;
         public string roomName = string.Empty;
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public RequestChangeRoomConfig() { }
         public RequestChangeRoomConfig(byte[] bytes, Header header)
@@ -824,7 +977,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
+
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             roomNo = room.No;
             accessRight = room.AccessRight;
@@ -853,6 +1015,7 @@ namespace MyMessageProtocol
         public int accessRight = 0;
         public string roomName = string.Empty;
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public ResponseChangeRoomConfigSuccess() { }
         public ResponseChangeRoomConfigSuccess(byte[] bytes, Header header)
@@ -864,7 +1027,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
+
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             roomNo = room.No;
             accessRight = room.AccessRight;
@@ -892,6 +1064,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public List<int> changedUsersNo = new List<int>();
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public RequestChangeManagementRights() { }
         public RequestChangeManagementRights(byte[] bytes, Header header)
@@ -903,7 +1076,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
+
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             roomNo = room.No;
             
@@ -934,6 +1116,7 @@ namespace MyMessageProtocol
         public int roomNo = 0;
         public List<int> changedUsersNo = new List<int>();
         private string decrypted = string.Empty;
+        private Room room = new Room();
 
         public ResponseChangeManagementRightsSuccess() { }
         public ResponseChangeManagementRightsSuccess(byte[] bytes, Header header)
@@ -945,7 +1128,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            Room room = JsonConvert.DeserializeObject<Room>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            room = deserializer.Deserialize<Room>(decrypted);
+#endif
+
+#if JSON
+            room = JsonConvert.DeserializeObject<Room>(decrypted);
+#endif
 
             roomNo = room.No;
 
@@ -979,6 +1171,7 @@ namespace MyMessageProtocol
         public string FILENAME = string.Empty;
         public string filePath = string.Empty;
         private string decrypted = string.Empty;
+        private File file = new File();
 
         public RequestSendFile() { }
         public RequestSendFile(byte[] bytes, Header header)
@@ -990,7 +1183,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            File file = JsonConvert.DeserializeObject<File>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            file = deserializer.Deserialize<File>(decrypted);
+#endif
+
+#if JSON
+            file = JsonConvert.DeserializeObject<File>(decrypted);
+#endif
 
             roomNo = file.Relation.RoomNo;
             userNo = file.Relation.UserNo;
@@ -1021,6 +1223,7 @@ namespace MyMessageProtocol
         public string filePath = string.Empty;
         public int userNo = 0;
         private string decrypted = string.Empty;
+        private File file = new File();
 
         public ResponseSendFile() { }
         public ResponseSendFile(byte[] bytes, Header header)
@@ -1032,7 +1235,16 @@ namespace MyMessageProtocol
 
             decrypted = Cryption.DecryptString_Aes(msg, Key, IV);
 
-            File file = JsonConvert.DeserializeObject<File>(decrypted);
+#if YAML
+            IDeserializer deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                .Build();
+            file = deserializer.Deserialize<File>(decrypted);
+#endif
+
+#if JSON
+            file = JsonConvert.DeserializeObject<File>(decrypted);
+#endif
 
             MSGID = file.No;
             roomNo = file.Relation.RoomNo;
